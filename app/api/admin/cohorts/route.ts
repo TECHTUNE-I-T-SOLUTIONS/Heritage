@@ -65,6 +65,11 @@ const patchSchema = z.object({
   status: z.enum(['active', 'archived', 'forming']).optional(),
   schedule: z.string().optional(),
   meetingLink: z.string().optional(),
+  name: z.string().optional(),
+  code: z.string().optional(),
+  minAge: z.number().optional(),
+  maxAge: z.number().optional(),
+  capacity: z.number().optional(),
 })
 
 export async function PATCH(request: Request) {
@@ -86,3 +91,17 @@ export async function PATCH(request: Request) {
 
   return ok({ id })
 }
+
+export async function DELETE(request: Request) {
+  const { response } = await requireAuth(['admin'])
+  if (response) return response
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return fail('Cohort ID required', 400)
+
+  await connectToDatabase()
+  const cohort = await Cohort.findByIdAndDelete(id).lean()
+  if (!cohort) return fail('Cohort not found', 404)
+  return ok({ id })
+}
+

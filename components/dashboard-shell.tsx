@@ -27,6 +27,7 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
     ['/dashboard/student/assignments', 'Assignments', FileText],
     ['/dashboard/student/leaderboard', 'Leaderboard', Trophy],
     ['/dashboard/student/progress', 'My Progress', BarChart3],
+    ['/dashboard/student/testimonials', 'Testimonials', MessageSquareQuote],
     ['/dashboard/student/profile', 'Profile', UserCircle],
   ],
   parent: [
@@ -44,6 +45,7 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
     ['/dashboard/educator/quizzes', 'Quizzes', CheckCircle2],
     ['/dashboard/educator/assignments', 'Assignments', FileText],
     ['/dashboard/educator/progress', 'Progress', BarChart3],
+    ['/dashboard/educator/testimonials', 'Testimonials', MessageSquareQuote],
   ],
   admin: [
     ['/dashboard/admin', 'Overview', LayoutDashboard],
@@ -61,6 +63,7 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
     ['/dashboard/admin/subscriptions', 'Subscriptions', CreditCard],
     ['/dashboard/admin/payments', 'Payments', Wallet],
     ['/dashboard/admin/testimonials', 'Testimonials', MessageSquareQuote],
+    ['/dashboard/admin/marketing', 'Marketing Mailer', Sparkles],
     ['/dashboard/admin/website-content', 'Website Content', BookOpen],
     ['/dashboard/admin/moderation', 'Moderation', ShieldCheck],
     ['/dashboard/admin/analytics', 'Analytics', Gauge],

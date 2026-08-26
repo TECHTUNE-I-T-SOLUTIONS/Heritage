@@ -15,6 +15,7 @@ interface Cohort {
   maxAge: number
   capacity: number
   schedule: string | null
+  meetingLink: string | null
   status: string
   educatorName: string | null
   educatorId: string | null
@@ -29,10 +30,15 @@ export default function AdminCohorts() {
 
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [form, setForm] = useState({ code: '', name: '', minAge: 6, maxAge: 9, capacity: 8, schedule: '' })
+  const [form, setForm] = useState({ code: '', name: '', minAge: 6, maxAge: 9, capacity: 8, schedule: '', meetingLink: '' })
 
   const [assigning, setAssigning] = useState<Cohort | null>(null)
   const [educatorId, setEducatorId] = useState('')
+
+  const [editing, setEditing] = useState<Cohort | null>(null)
+  const [editForm, setEditForm] = useState({ id: '', code: '', name: '', minAge: 6, maxAge: 9, capacity: 8, schedule: '', meetingLink: '', status: 'active' })
+
+  const [deleting, setDeleting] = useState<Cohort | null>(null)
 
   async function create() {
     if (!form.code.trim() || !form.name.trim()) return push('Add a code and name.', 'error')
@@ -44,10 +50,11 @@ export default function AdminCohorts() {
         maxAge: Number(form.maxAge),
         capacity: Number(form.capacity),
         schedule: form.schedule || undefined,
+        meetingLink: form.meetingLink || undefined,
       })
       push('Cohort created.')
       setOpen(false)
-      setForm({ code: '', name: '', minAge: 6, maxAge: 9, capacity: 8, schedule: '' })
+      setForm({ code: '', name: '', minAge: 6, maxAge: 9, capacity: 8, schedule: '', meetingLink: '' })
       refetch()
     } catch (e) {
       push(e instanceof Error ? e.message : 'Could not create', 'error')
@@ -63,6 +70,40 @@ export default function AdminCohorts() {
       setAssigning(null); setEducatorId(''); refetch()
     } catch (e) {
       push(e instanceof Error ? e.message : 'Could not assign', 'error')
+    } finally { setBusy(false) }
+  }
+
+  async function edit() {
+    if (!editForm.code.trim() || !editForm.name.trim()) return push('Add a code and name.', 'error')
+    setBusy(true)
+    try {
+      await apiPatch('/api/admin/cohorts', {
+        ...editForm,
+        minAge: Number(editForm.minAge),
+        maxAge: Number(editForm.maxAge),
+        capacity: Number(editForm.capacity),
+        schedule: editForm.schedule || null,
+        meetingLink: editForm.meetingLink || null,
+      })
+      push('Cohort updated.')
+      setEditing(null)
+      refetch()
+    } catch (e) {
+      push(e instanceof Error ? e.message : 'Could not update', 'error')
+    } finally { setBusy(false) }
+  }
+
+  async function remove() {
+    if (!deleting) return
+    setBusy(true)
+    try {
+      const { apiDelete } = await import('@/lib/client')
+      await apiDelete(`/api/admin/cohorts?id=${deleting.id}`)
+      push('Cohort deleted.')
+      setDeleting(null)
+      refetch()
+    } catch (e) {
+      push(e instanceof Error ? e.message : 'Could not delete', 'error')
     } finally { setBusy(false) }
   }
 
@@ -90,7 +131,11 @@ export default function AdminCohorts() {
                 <div className="rounded-xl border border-border p-3"><p className="truncate text-sm font-medium">{c.educatorName ?? 'Unassigned'}</p><p className="text-[11px] text-muted-foreground">Educator</p></div>
               </div>
               {c.schedule && <p className="mt-3 text-xs text-muted-foreground">{c.schedule}</p>}
-              <button onClick={() => { setAssigning(c); setEducatorId(c.educatorId ?? '') }} className="mt-4 w-full rounded-full border border-border px-4 py-2 text-sm hover:bg-secondary">Assign educator</button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button onClick={() => { setAssigning(c); setEducatorId(c.educatorId ?? '') }} className="flex-1 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-secondary">Assign educator</button>
+                <button onClick={() => { setEditing(c); setEditForm({ id: c.id, code: c.code, name: c.name, minAge: c.minAge, maxAge: c.maxAge, capacity: c.capacity, schedule: c.schedule ?? '', meetingLink: c.meetingLink ?? '', status: c.status }) }} className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-secondary">Edit</button>
+                <button onClick={() => setDeleting(c)} className="rounded-full border border-destructive/20 text-destructive bg-destructive/5 hover:bg-destructive/10 px-3 py-1.5 text-xs">Delete</button>
+              </div>
             </Card>
           ))}
         </div>
@@ -111,6 +156,33 @@ export default function AdminCohorts() {
             <Field label="Capacity"><Input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} /></Field>
           </div>
           <Field label="Schedule"><Input value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} placeholder="Saturdays · 10:00 EST" /></Field>
+          <Field label="Meeting Link"><Input value={form.meetingLink} onChange={(e) => setForm({ ...form, meetingLink: e.target.value })} placeholder="https://meet.google.com/..." /></Field>
+        </div>
+      </Modal>
+
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit cohort" footer={
+        <>
+          <button onClick={() => setEditing(null)} className="rounded-full border border-border px-5 py-2.5 text-sm">Cancel</button>
+          <button onClick={edit} disabled={busy} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</button>
+        </>
+      }>
+        <div className="space-y-4">
+          <Field label="Code"><Input value={editForm.code} onChange={(e) => setEditForm({ ...editForm, code: e.target.value })} /></Field>
+          <Field label="Name"><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Min age"><Input type="number" value={editForm.minAge} onChange={(e) => setEditForm({ ...editForm, minAge: Number(e.target.value) })} /></Field>
+            <Field label="Max age"><Input type="number" value={editForm.maxAge} onChange={(e) => setEditForm({ ...editForm, maxAge: Number(e.target.value) })} /></Field>
+            <Field label="Capacity"><Input type="number" value={editForm.capacity} onChange={(e) => setEditForm({ ...editForm, capacity: Number(e.target.value) })} /></Field>
+          </div>
+          <Field label="Schedule"><Input value={editForm.schedule} onChange={(e) => setEditForm({ ...editForm, schedule: e.target.value })} /></Field>
+          <Field label="Meeting Link"><Input value={editForm.meetingLink} onChange={(e) => setEditForm({ ...editForm, meetingLink: e.target.value })} /></Field>
+          <Field label="Status">
+            <Select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+              <option value="active">Active</option>
+              <option value="forming">Forming</option>
+              <option value="archived">Archived</option>
+            </Select>
+          </Field>
         </div>
       </Modal>
 
@@ -126,6 +198,15 @@ export default function AdminCohorts() {
             {educators.data?.map((ed) => <option key={ed.id} value={ed.id}>{ed.fullName}</option>)}
           </Select>
         </Field>
+      </Modal>
+
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Delete cohort" footer={
+        <>
+          <button onClick={() => setDeleting(null)} className="rounded-full border border-border px-5 py-2.5 text-sm">Cancel</button>
+          <button onClick={remove} disabled={busy} className="rounded-full bg-destructive text-destructive-foreground px-5 py-2.5 text-sm disabled:opacity-60">{busy ? 'Deleting…' : 'Delete'}</button>
+        </>
+      }>
+        <p className="text-sm text-muted-foreground">Are you sure you want to delete the cohort <strong>{deleting?.name}</strong>? This action is permanent and cannot be undone.</p>
       </Modal>
     </>
   )

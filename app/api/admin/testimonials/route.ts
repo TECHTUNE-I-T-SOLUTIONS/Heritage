@@ -30,7 +30,14 @@ export async function POST(request: Request) {
   return ok({ id: String(t._id) }, { status: 201 })
 }
 
-const patchSchema = z.object({ id: z.string(), published: z.boolean() })
+const patchSchema = z.object({
+  id: z.string(),
+  published: z.boolean().optional(),
+  authorName: z.string().optional(),
+  relationship: z.string().optional(),
+  quote: z.string().optional(),
+  rating: z.number().min(1).max(5).optional(),
+})
 
 export async function PATCH(request: Request) {
   const { response } = await requireAuth(['admin'])
@@ -38,8 +45,25 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null)
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) return fail('Invalid request', 422)
+
   await connectToDatabase()
-  const t = await Testimonial.findByIdAndUpdate(parsed.data.id, { published: parsed.data.published }, { new: true }).lean()
+  const { id, ...update } = parsed.data
+  const t = await Testimonial.findByIdAndUpdate(id, update, { new: true }).lean()
   if (!t) return fail('Not found', 404)
-  return ok({ id: parsed.data.id, published: t.published })
+  return ok({ id, published: t.published })
 }
+
+export async function DELETE(request: Request) {
+  const { response } = await requireAuth(['admin'])
+  if (response) return response
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return fail('Testimonial ID required', 400)
+
+  await connectToDatabase()
+  const t = await Testimonial.findByIdAndDelete(id).lean()
+  if (!t) return fail('Testimonial not found', 404)
+  return ok({ id })
+}
+

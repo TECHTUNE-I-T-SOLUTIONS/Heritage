@@ -1,4 +1,5 @@
-import { requireAuth, ok } from '@/lib/api'
+import { z } from 'zod'
+import { requireAuth, ok, fail } from '@/lib/api'
 import { connectToDatabase } from '@/lib/db'
 import { User } from '@/models/User'
 import { Cohort } from '@/models/Cohort'
@@ -32,3 +33,57 @@ export async function GET() {
     quizCount,
   })
 }
+
+const patchCohortSchema = z.object({
+  id: z.string(),
+  schedule: z.string().optional(),
+  meetingLink: z.string().optional(),
+})
+
+export async function PATCH(request: Request) {
+  const { session, response } = await requireAuth(['educator'])
+  if (response) return response
+  const body = await request.json().catch(() => null)
+  const parsed = patchCohortSchema.safeParse(body)
+  if (!parsed.success) return fail('Provide cohort id and schedule/meeting link', 422)
+
+  await connectToDatabase()
+  const { id, schedule, meetingLink } = parsed.data
+  const cohort = await Cohort.findOneAndUpdate(
+    { _id: id, educator: session.userId },
+    { $set: { schedule, meetingLink } },
+    { new: true }
+  ).lean()
+
+  if (!cohort) return fail('Cohort not found or access denied', 404)
+
+  // Send schedule emails to all students in the cohort
+  try {
+    const students = await User.find({ role: 'student', cohort: cohort._id }).select('email fullName').lean()
+    if (students.length > 0 && (schedule || meetingLink)) {
+      const { sendEmail } = await import('@/lib/mail')
+      await Promise.all(
+        students.map((student) =>
+          sendEmail({
+            to: student.email,
+            subject: `Class Scheduled: ${cohort.name}`,
+            type: 'class_schedule',
+            data: {
+              name: student.fullName,
+              className: 'Live Tutor Session',
+              cohortName: cohort.name,
+              date: schedule || cohort.schedule || 'Regular Class Hours',
+              meetingLink: meetingLink || cohort.meetingLink || '',
+            },
+          })
+        )
+      )
+    }
+  } catch (err) {
+    console.error('Failed to send class schedule emails:', err)
+  }
+
+  return ok({ id })
+}
+
+

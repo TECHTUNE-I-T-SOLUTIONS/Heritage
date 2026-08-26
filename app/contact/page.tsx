@@ -7,9 +7,11 @@ import { Field, Input, Textarea } from '@/components/ui/form'
 import { apiPost } from '@/lib/client'
 
 const channels = [
-  { icon: Mail, label: 'Email', value: 'hello@damzynextgen.app', href: 'mailto:hello@damzynextgen.app' },
-  { icon: MessageCircle, label: 'WhatsApp', value: 'Chat with our team', href: 'https://wa.me/' },
-  { icon: CircleFadingPlus, label: 'Social', value: '@heritageclub', href: 'https://instagram.com/' },
+  { icon: Mail, label: 'General Enquiries', value: 'hello@damzynextgen.app', href: 'mailto:hello@damzynextgen.app' },
+  { icon: Mail, label: 'Student Support', value: 'support@damzynextgen.app', href: 'mailto:support@damzynextgen.app' },
+  { icon: Mail, label: 'Finance & Billing', value: 'finance@damzynextgen.app', href: 'mailto:finance@damzynextgen.app' },
+  { icon: Mail, label: 'Administration', value: 'admin@damzynextgen.app', href: 'mailto:admin@damzynextgen.app' },
+  { icon: Mail, label: 'Director / Fallback', value: 'damzyshittu1@gmail.com', href: 'mailto:damzyshittu1@gmail.com' },
 ]
 
 export default function ContactPage() {

@@ -26,6 +26,11 @@ export default function EducatorAssignments() {
   const [grade, setGrade] = useState('')
   const [feedback, setFeedback] = useState('')
 
+  const [editing, setEditing] = useState<AssignmentRow | null>(null)
+  const [editForm, setEditForm] = useState({ id: '', title: '', instructions: '', dueDate: '', xpReward: 150 })
+
+  const [deleting, setDeleting] = useState<AssignmentRow | null>(null)
+
   async function createAssignment() {
     if (!form.title.trim() || !form.instructions.trim()) return push('Add a title and instructions.', 'error')
     setBusy(true)
@@ -35,6 +40,31 @@ export default function EducatorAssignments() {
       setOpen(false); setForm({ title: '', instructions: '', dueDate: '', xpReward: 150 }); assignments.refetch()
     } catch (e) {
       push(e instanceof Error ? e.message : 'Could not create', 'error')
+    } finally { setBusy(false) }
+  }
+
+  async function editAssignment() {
+    if (!editForm.title.trim() || !editForm.instructions.trim()) return push('Add a title and instructions.', 'error')
+    setBusy(true)
+    try {
+      await apiPatch('/api/educator/assignments', { ...editForm, xpReward: Number(editForm.xpReward) })
+      push('Assignment updated.')
+      setEditing(null); assignments.refetch()
+    } catch (e) {
+      push(e instanceof Error ? e.message : 'Could not update', 'error')
+    } finally { setBusy(false) }
+  }
+
+  async function deleteAssignment() {
+    if (!deleting) return
+    setBusy(true)
+    try {
+      const { apiDelete } = await import('@/lib/client')
+      await apiDelete(`/api/educator/assignments?id=${deleting.id}`)
+      push('Assignment deleted.')
+      setDeleting(null); assignments.refetch()
+    } catch (e) {
+      push(e instanceof Error ? e.message : 'Could not delete', 'error')
     } finally { setBusy(false) }
   }
 
@@ -73,13 +103,19 @@ export default function EducatorAssignments() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {assignments.data.map((a) => (
-                <Card key={a.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-serif text-lg">{a.title}</h3>
-                    <Badge tone={a.status === 'published' ? 'success' : 'neutral'}>{a.status}</Badge>
+                <Card key={a.id} className="flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-serif text-lg">{a.title}</h3>
+                      <Badge tone={a.status === 'published' ? 'success' : 'neutral'}>{a.status}</Badge>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{a.instructions}</p>
+                    <p className="mt-3 text-xs text-muted-foreground">{a.dueDate ? `Due ${formatDate(a.dueDate)}` : 'No due date'} · +{a.xpReward} XP</p>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{a.instructions}</p>
-                  <p className="mt-3 text-xs text-muted-foreground">{a.dueDate ? `Due ${formatDate(a.dueDate)}` : 'No due date'} · +{a.xpReward} XP</p>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => { setEditing(a); setEditForm({ id: a.id, title: a.title, instructions: a.instructions, dueDate: a.dueDate ? a.dueDate.split('T')[0] : '', xpReward: a.xpReward }) }} className="flex-1 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-secondary">Edit</button>
+                    <button onClick={() => setDeleting(a)} className="rounded-full border border-destructive/20 text-destructive bg-destructive/5 hover:bg-destructive/10 px-3 py-1.5 text-xs">Delete</button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -127,6 +163,29 @@ export default function EducatorAssignments() {
         </div>
       </Modal>
 
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit assignment" footer={
+        <>
+          <button onClick={() => setEditing(null)} className="rounded-full border border-border px-5 py-2.5 text-sm">Cancel</button>
+          <button onClick={editAssignment} disabled={busy} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</button>
+        </>
+      }>
+        <div className="space-y-4">
+          <Field label="Title"><Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} /></Field>
+          <Field label="Instructions"><Textarea value={editForm.instructions} onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })} /></Field>
+          <Field label="Due date"><Input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })} /></Field>
+          <Field label="XP reward"><Input type="number" value={editForm.xpReward} onChange={(e) => setEditForm({ ...editForm, xpReward: Number(e.target.value) })} /></Field>
+        </div>
+      </Modal>
+
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Delete assignment" footer={
+        <>
+          <button onClick={() => setDeleting(null)} className="rounded-full border border-border px-5 py-2.5 text-sm">Cancel</button>
+          <button onClick={deleteAssignment} disabled={busy} className="rounded-full bg-destructive text-destructive-foreground px-5 py-2.5 text-sm disabled:opacity-60">{busy ? 'Deleting…' : 'Delete'}</button>
+        </>
+      }>
+        <p className="text-sm text-muted-foreground">Are you sure you want to delete the assignment <strong>{deleting?.title}</strong>? This action is permanent and cannot be undone.</p>
+      </Modal>
+
       <Modal open={!!grading} onClose={() => setGrading(null)} title="Review submission" footer={
         <>
           <button onClick={() => saveGrade('flagged')} disabled={busy} className="rounded-full border border-border px-4 py-2.5 text-sm">Flag</button>
@@ -150,3 +209,4 @@ export default function EducatorAssignments() {
     </>
   )
 }
+

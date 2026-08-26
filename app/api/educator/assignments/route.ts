@@ -44,3 +44,51 @@ export async function POST(request: Request) {
   const assignment = await Assignment.create({ ...rest, dueDate: dueDate ? new Date(dueDate) : undefined, createdBy: session.userId })
   return ok({ id: String(assignment._id) }, { status: 201 })
 }
+
+const patchSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  instructions: z.string().optional(),
+  dueDate: z.string().optional(),
+  xpReward: z.number().optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+})
+
+export async function PATCH(request: Request) {
+  const { session, response } = await requireAuth(['educator', 'admin'])
+  if (response) return response
+  const body = await request.json().catch(() => null)
+  const parsed = patchSchema.safeParse(body)
+  if (!parsed.success) return fail('Invalid request', 422)
+
+  await connectToDatabase()
+  const { id, dueDate, ...rest } = parsed.data
+  const update: Record<string, unknown> = { ...rest }
+  if (dueDate !== undefined) update.dueDate = dueDate ? new Date(dueDate) : null
+
+  const assignment = await Assignment.findOneAndUpdate(
+    session.role === 'educator' ? { _id: id, createdBy: session.userId } : { _id: id },
+    update,
+    { new: true }
+  ).lean()
+
+  if (!assignment) return fail('Assignment not found', 404)
+  return ok({ id })
+}
+
+export async function DELETE(request: Request) {
+  const { session, response } = await requireAuth(['educator', 'admin'])
+  if (response) return response
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return fail('Assignment ID required', 400)
+
+  await connectToDatabase()
+  const assignment = await Assignment.findOneAndDelete(
+    session.role === 'educator' ? { _id: id, createdBy: session.userId } : { _id: id }
+  ).lean()
+
+  if (!assignment) return fail('Assignment not found', 404)
+  return ok({ id })
+}
+

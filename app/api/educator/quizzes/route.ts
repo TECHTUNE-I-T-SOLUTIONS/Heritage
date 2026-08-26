@@ -11,7 +11,8 @@ export async function GET() {
     .select('title description questions xpReward status')
     .sort({ createdAt: -1 })
     .lean()
-  return ok(quizzes.map((q) => ({ id: String(q._id), title: q.title, description: q.description ?? null, questionCount: q.questions.length, xpReward: q.xpReward, status: q.status })))
+  return ok(quizzes.map((q) => ({ id: String(q._id), title: q.title, description: q.description ?? null, questionCount: q.questions.length, xpReward: q.xpReward, status: q.status, questions: q.questions })))
+
 }
 
 const schema = z.object({
@@ -42,3 +43,57 @@ export async function POST(request: Request) {
   const quiz = await Quiz.create({ ...parsed.data, createdBy: session.userId })
   return ok({ id: String(quiz._id) }, { status: 201 })
 }
+
+const patchSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  xpReward: z.number().optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  questions: z
+    .array(
+      z.object({
+        prompt: z.string().min(1),
+        options: z.array(z.string().min(1)).min(2),
+        correctIndex: z.number().int().min(0),
+        points: z.number().min(1).default(1),
+      }),
+    )
+    .optional(),
+})
+
+export async function PATCH(request: Request) {
+  const { session, response } = await requireAuth(['educator', 'admin'])
+  if (response) return response
+  const body = await request.json().catch(() => null)
+  const parsed = patchSchema.safeParse(body)
+  if (!parsed.success) return fail('Invalid quiz data', 422)
+
+  await connectToDatabase()
+  const { id, ...update } = parsed.data
+  const quiz = await Quiz.findOneAndUpdate(
+    session.role === 'educator' ? { _id: id, createdBy: session.userId } : { _id: id },
+    update,
+    { new: true }
+  ).lean()
+
+  if (!quiz) return fail('Quiz not found', 404)
+  return ok({ id })
+}
+
+export async function DELETE(request: Request) {
+  const { session, response } = await requireAuth(['educator', 'admin'])
+  if (response) return response
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return fail('Quiz ID required', 400)
+
+  await connectToDatabase()
+  const quiz = await Quiz.findOneAndDelete(
+    session.role === 'educator' ? { _id: id, createdBy: session.userId } : { _id: id }
+  ).lean()
+
+  if (!quiz) return fail('Quiz not found', 404)
+  return ok({ id })
+}
+

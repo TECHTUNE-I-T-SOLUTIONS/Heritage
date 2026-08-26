@@ -36,6 +36,10 @@ const patchSchema = z.object({
   id: z.string(),
   status: z.enum(['active', 'suspended', 'deactivated', 'pending']).optional(),
   cohort: z.string().nullable().optional(),
+  fullName: z.string().optional(),
+  email: z.string().optional(),
+  age: z.number().nullable().optional(),
+  xp: z.number().optional(),
 })
 
 export async function PATCH(request: Request) {
@@ -51,3 +55,17 @@ export async function PATCH(request: Request) {
   if (!user) return fail('User not found', 404)
   return ok({ id, status: user.status })
 }
+
+export async function DELETE(request: Request) {
+  const { response } = await requireAuth(['admin'])
+  if (response) return response
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return fail('User ID required', 400)
+
+  await connectToDatabase()
+  const user = await User.findByIdAndDelete(id).lean()
+  if (!user) return fail('User not found', 404)
+  return ok({ id })
+}
+

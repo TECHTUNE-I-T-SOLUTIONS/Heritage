@@ -8,3 +8,5 @@ export * from './Billing'
 export * from './Content'
 export * from './Attendance'
 export * from './ProfilePicture'
+export * from './Assessment'
+

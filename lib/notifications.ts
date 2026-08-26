@@ -57,18 +57,40 @@ export async function notifyMany(users: UserId[], input: Omit<NotifyInput, 'user
 
 // ── Action-specific helpers ──────────────────────────────────────────────
 
-export function notifyWelcome(user: UserId, name: string) {
-  return notify({
+export async function notifyWelcome(user: UserId, name: string) {
+  // Save notification in database
+  await notify({
     user,
     type: 'welcome',
     title: `Welcome to Heritage Club, ${name.split(' ')[0]}! 🎉`,
     body: 'Your account is ready. Complete your membership payment to unlock your dashboard and live classes.',
     link: '/dashboard',
   })
+
+  // Send SMTP Welcome Email
+  try {
+    const { User } = await import('@/models/User')
+    const { sendEmail } = await import('@/lib/mail')
+    const u = await User.findById(user).select('email').lean()
+    if (u && u.email) {
+      await sendEmail({
+        to: u.email,
+        subject: `Welcome to Heritage Club, ${name.split(' ')[0]}! 🎉`,
+        type: 'welcome',
+        data: {
+          name,
+          linkUrl: 'https://heritage.damzynextgen.app/dashboard',
+          linkText: 'Go to your Dashboard',
+        },
+      })
+    }
+  } catch (err) {
+    console.error('Failed to send welcome email:', err)
+  }
 }
 
-export function notifyPaymentSuccess(user: UserId, amountLabel?: string) {
-  return notify({
+export async function notifyPaymentSuccess(user: UserId, amountLabel?: string) {
+  await notify({
     user,
     type: 'subscription',
     title: 'Payment successful — membership active',
@@ -77,24 +99,92 @@ export function notifyPaymentSuccess(user: UserId, amountLabel?: string) {
       : 'Your payment was received and your Heritage Club membership is now active.',
     link: '/dashboard',
   })
+
+  // Send SMTP Payment Invoice Email
+  try {
+    const { User } = await import('@/models/User')
+    const { sendEmail } = await import('@/lib/mail')
+    const u = await User.findById(user).select('email fullName').lean()
+    if (u && u.email) {
+      await sendEmail({
+        to: u.email,
+        subject: 'Payment Invoice Confirmation — Heritage Club',
+        type: 'payment',
+        data: {
+          name: u.fullName,
+          amount: amountLabel || 'Subscription payment',
+          invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        },
+        fromAlias: 'finance',
+      })
+    }
+  } catch (err) {
+    console.error('Failed to send payment email:', err)
+  }
 }
 
-export function notifyPaymentFailed(user: UserId) {
-  return notify({
+export async function notifyPaymentFailed(user: UserId) {
+  await notify({
     user,
     type: 'payment_failed',
     title: 'Payment could not be completed',
     body: 'Your payment did not go through. You can retry payment any time from your dashboard to activate your membership.',
     link: '/dashboard',
   })
+
+  // Send SMTP Reminder Email
+  try {
+    const { User } = await import('@/models/User')
+    const { sendEmail } = await import('@/lib/mail')
+    const u = await User.findById(user).select('email fullName').lean()
+    if (u && u.email) {
+      await sendEmail({
+        to: u.email,
+        subject: 'Action Required: Payment Attempt Failed',
+        type: 'reminder',
+        data: {
+          name: u.fullName,
+          body: 'Your membership subscription payment failed or was declined. Please try again from your dashboard to keep your learning uninterrupted.',
+          linkUrl: 'https://heritage.damzynextgen.app/dashboard',
+          linkText: 'Retry Payment',
+        },
+        fromAlias: 'finance',
+      })
+    }
+  } catch (err) {
+    console.error('Failed to send payment failed email:', err)
+  }
 }
 
-export function notifySubscriptionActivated(user: UserId) {
-  return notify({
+export async function notifySubscriptionActivated(user: UserId) {
+  await notify({
     user,
     type: 'subscription',
     title: 'Membership activated',
     body: 'You now have full access to lessons, quizzes, assignments and live classes.',
     link: '/dashboard',
   })
+
+  // Send SMTP Notification Email
+  try {
+    const { User } = await import('@/models/User')
+    const { sendEmail } = await import('@/lib/mail')
+    const u = await User.findById(user).select('email fullName').lean()
+    if (u && u.email) {
+      await sendEmail({
+        to: u.email,
+        subject: 'Welcome to Heritage Club — Access Granted!',
+        type: 'notification',
+        data: {
+          name: u.fullName,
+          body: 'Your subscription has been successfully activated. You now have full access to our educational material, live tutor classes, assignments, and curriculum modules.',
+          linkUrl: 'https://heritage.damzynextgen.app/dashboard',
+          linkText: 'Explore Dashboard',
+        },
+      })
+    }
+  } catch (err) {
+    console.error('Failed to send activation email:', err)
+  }
 }
+
