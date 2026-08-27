@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CreditCard, FileText,
   Gauge, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquareQuote,
-  Settings, Shapes, ShieldCheck, Sparkles, Trophy, UserCircle, Users, Wallet, X,
+  Settings, Shapes, ShieldCheck, Sparkles, Trophy, UserCircle, Users, Wallet, X, ClipboardList,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Logo } from '@/components/logo'
@@ -64,6 +64,8 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
     ['/dashboard/admin/payments', 'Payments', Wallet],
     ['/dashboard/admin/testimonials', 'Testimonials', MessageSquareQuote],
     ['/dashboard/admin/marketing', 'Marketing Mailer', Sparkles],
+    ['/dashboard/admin/waitlist', 'Waitlist Leads', ClipboardList],
+    ['/dashboard/admin/plans', 'Pricing Settings', CreditCard],
     ['/dashboard/admin/website-content', 'Website Content', BookOpen],
     ['/dashboard/admin/moderation', 'Moderation', ShieldCheck],
     ['/dashboard/admin/analytics', 'Analytics', Gauge],
@@ -79,6 +81,7 @@ export interface ShellUser {
   detail?: string
   avatarUrl?: string
   userId?: string
+  switchedFromParentName?: string
 }
 
 function Avatar({ user, size = 36, className = '' }: { user: ShellUser; size?: number; className?: string }) {
@@ -284,7 +287,33 @@ export function DashboardShell({ role, user, children }: { role: ShellRole; user
             <ProfileMenu role={role} user={user} onSignOut={() => setConfirmSignOut(true)} />
           </div>
         </header>
-        <main className="animate-in-fade mx-auto max-w-7xl p-5 lg:p-8">{children}</main>
+        <main className="animate-in-fade mx-auto max-w-7xl p-5 lg:p-8">
+          {user.switchedFromParentName && (
+            <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 px-5 py-3 text-sm text-yellow-500">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                </span>
+                <span>Logged in as <strong>{user.name}</strong> (Viewing child portal via parent <strong>{user.switchedFromParentName}</strong>)</span>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await apiPost('/api/auth/switch', { action: 'parent' })
+                    window.location.href = '/dashboard/parent'
+                  } catch (e) {
+                    alert('Could not switch back to parent dashboard.')
+                  }
+                }}
+                className="rounded-full bg-yellow-500 px-4 py-1.5 text-xs font-semibold text-black hover:bg-yellow-400 transition"
+              >
+                Back to Parent dashboard
+              </button>
+            </div>
+          )}
+          {children}
+        </main>
       </div>
 
       <Modal

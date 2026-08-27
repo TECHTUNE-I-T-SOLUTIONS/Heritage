@@ -6,5 +6,16 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const s = await getSession()
   if (!s) redirect('/login')
   if (s.role !== 'student') redirect(`/dashboard/${s.role}`)
-  return <DashboardShell role="student" user={{ name: s.name, email: s.email }}>{children}</DashboardShell>
+  return (
+    <DashboardShell
+      role="student"
+      user={{
+        name: s.name,
+        email: s.email,
+        switchedFromParentName: s.switchedFromParentName as string,
+      }}
+    >
+      {children}
+    </DashboardShell>
+  )
 }

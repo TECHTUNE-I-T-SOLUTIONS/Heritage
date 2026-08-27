@@ -56,6 +56,7 @@ export interface IPayment {
   invoiceNumber?: string
   provider?: string
   providerPaymentId?: string
+  metadata?: Record<string, unknown>
   paidAt?: Date
   createdAt: Date
   updatedAt: Date
@@ -72,6 +73,7 @@ const PaymentSchema = new Schema<IPayment>(
     provider: { type: String },
     providerPaymentId: { type: String },
     paidAt: { type: Date },
+    metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true },
 )

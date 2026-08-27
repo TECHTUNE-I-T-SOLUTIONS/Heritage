@@ -1,13 +1,27 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Check, Star } from 'lucide-react'
 import { PublicChrome } from '@/components/public-chrome'
 import { PLAN_LIST, formatCurrency } from '@/lib/format'
 
-export const metadata = { title: 'Pricing — Heritage Club' }
-
 const baseFeatures = ['Full programme access', 'Live weekend classes', 'Quizzes, assignments & projects', 'XP, levels & leaderboard', 'Progress tracking']
 
 export default function PricingPage() {
+  const [plans, setPlans] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.data?.plans) setPlans(j.data.plans)
+      })
+      .catch(() => {})
+  }, [])
+
+  const activePlans = plans.length > 0 ? plans : PLAN_LIST
+
   return (
     <PublicChrome>
       <main>
@@ -23,12 +37,12 @@ export default function PricingPage() {
 
         <section className="mx-auto max-w-7xl px-5 pb-16 lg:px-8">
           <div className="grid gap-5 lg:grid-cols-4 sm:grid-cols-2">
-            {PLAN_LIST.map((plan) => {
+            {activePlans.map((plan) => {
               const recommended = plan.key === 'family2'
               return (
                 <div key={plan.key} className={`flex flex-col rounded-3xl border p-6 ${recommended ? 'border-foreground bg-foreground text-background' : 'border-border bg-card'}`}>
                   <div className="mb-8 flex items-center justify-between">
-                    <span className={`font-mono text-[10px] uppercase tracking-widest ${recommended ? 'opacity-70' : 'text-muted-foreground'}`}>{plan.tag}</span>
+                    <span className={`font-mono text-[10px] uppercase tracking-widest ${recommended ? 'opacity-70' : 'text-muted-foreground'}`}>{plan.tag || `${plan.children} children`}</span>
                     {recommended && <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-1 text-[10px] font-semibold text-accent-foreground"><Star className="h-3 w-3" /> Popular</span>}
                   </div>
                   <h2 className="text-xl font-semibold">{plan.label}</h2>

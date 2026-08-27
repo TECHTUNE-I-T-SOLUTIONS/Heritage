@@ -13,7 +13,7 @@ export async function GET() {
   const parentId = session.userId
 
   const children = await User.find({ parent: parentId, role: 'student' })
-    .select('fullName preferredName age xp level streak cohort avatarUrl status')
+    .select('fullName preferredName age xp level streak cohort avatarUrl status email')
     .lean()
 
   const cohortIds = children.map((c) => c.cohort).filter(Boolean)
@@ -28,6 +28,7 @@ export async function GET() {
         id: String(child._id),
         fullName: child.fullName,
         preferredName: child.preferredName ?? null,
+        email: child.email,
         age: child.age ?? null,
         status: child.status,
         xp: child.xp ?? 0,

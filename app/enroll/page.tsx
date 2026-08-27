@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Plus, Trash2, Users, GraduationCap, Check, CreditCard } from 'lucide-react'
 import { AuthSplit } from '@/components/auth-split'
 import { Field, Input, Select } from '@/components/ui/form'
@@ -43,6 +44,7 @@ const ghostBtn =
   'inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border px-6 text-sm transition hover:bg-secondary'
 
 export default function EnrollPage() {
+  const router = useRouter()
   const [flow, setFlow] = useState<'choose' | 'parent' | 'student'>('choose')
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -52,10 +54,34 @@ export default function EnrollPage() {
   const [children, setChildren] = useState<Child[]>([emptyChild()])
   const [student, setStudent] = useState({ fullName: '', email: '', password: '', dateOfBirth: '', age: '', preferredName: '', country: '', timezone: '', availability: '' })
 
+  const [dbPlans, setDbPlans] = useState<any[]>([])
+
+  useEffect(() => {
+    // Check waitlist status
+    fetch('/api/waitlist/status')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.data && !j.data.launched) {
+          router.push('/waitlist')
+        }
+      })
+      .catch(() => {})
+  }, [router])
+
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.data?.plans) setDbPlans(j.data.plans)
+      })
+      .catch(() => {})
+  }, [])
+
   const steps = flow === 'student' ? STUDENT_STEPS : PARENT_STEPS
   const childCount = flow === 'student' ? 1 : children.length
   const planKey = planForChildren(childCount)
-  const plan = useMemo(() => PLAN_LIST.find((p) => p.key === planKey)!, [planKey])
+  const activePlans = dbPlans.length > 0 ? dbPlans : PLAN_LIST
+  const plan = useMemo(() => activePlans.find((p) => p.key === planKey) || activePlans[0], [planKey, activePlans])
 
   function reset(next: 'parent' | 'student') {
     setFlow(next)

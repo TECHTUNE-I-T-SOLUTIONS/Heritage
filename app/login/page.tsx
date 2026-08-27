@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthSplit } from '@/components/auth-split'
@@ -37,6 +37,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Redirect to waitlist if not launched yet
+  useEffect(() => {
+    fetch('/api/waitlist/status')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.data && !j.data.launched) {
+          router.push('/waitlist')
+        }
+      })
+      .catch(() => {})
+  }, [router])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

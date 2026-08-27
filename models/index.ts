@@ -9,4 +9,6 @@ export * from './Content'
 export * from './Attendance'
 export * from './ProfilePicture'
 export * from './Assessment'
+export * from './Waitlist'
+
 

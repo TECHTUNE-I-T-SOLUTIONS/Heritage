@@ -20,7 +20,7 @@ interface MailData {
 interface MailOptions {
   to: string | string[]
   subject: string
-  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing'
+  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist'
   data: MailData
   fromAlias?: 'support' | 'finance' | 'admin' | 'hello' | 'no-reply'
   attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }>
@@ -78,6 +78,7 @@ export async function sendEmail({ to, subject, type, data, fromAlias = 'no-reply
 function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
   const websiteUrl = 'https://heritage.damzynextgen.app'
   const logoUrl = 'https://heritage.damzynextgen.app/heritage.png'
+  const formattedBody = data.body ? data.body.replace(/\n/g, '<br />') : ''
 
   let contentHtml = ''
 
@@ -145,7 +146,7 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
         <p style="color: #4a4a4a; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
           Hello ${data.name || 'Member'},<br><br>
           This is a friendly reminder from Heritage Club:<br><br>
-          ${data.body || 'You have upcoming pending tasks or live class schedule.'}
+          ${formattedBody || 'You have upcoming pending tasks or live class schedule.'}
         </p>
         ${data.linkUrl ? `
           <a href="${data.linkUrl}" style="background-color: #2b6cb0; color: #ffffff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 24px;">
@@ -159,7 +160,7 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
       contentHtml = `
         <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px;">Heritage Club News & Updates 📰</h1>
         <div style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin-bottom: 24px;">
-          ${data.body || 'Stay tuned for cultural updates and learning news.'}
+          ${formattedBody || 'Stay tuned for cultural updates and learning news.'}
         </div>
       `
       break
@@ -167,8 +168,24 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
     case 'marketing':
       contentHtml = `
         <div style="color: #2d3748; font-size: 16px; line-height: 26px; margin-bottom: 24px;">
-          ${data.body || ''}
+          ${formattedBody || ''}
         </div>
+      `
+      break
+
+    case 'waitlist':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px; font-family: 'Playfair Display', Georgia, serif;">Welcome to the Waitlist! 🚀</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin-bottom: 24px;">
+          Hello ${data.name || 'there'},<br><br>
+          Thank you for joining the exclusive pre-launch waitlist for Heritage Club. We are excited to have you with us as we count down to our official launch!<br><br>
+          <strong>Here is what you can anticipate:</strong><br>
+          • <strong>Live Interactive Classes:</strong> Engaging weekend small-group sessions with dedicated educators.<br>
+          • <strong>Cultural Learning Journey:</strong> A premium, custom-designed curriculum celebrating heritage and history.<br>
+          • <strong>Interactive Assignments & Quizzes:</strong> Fun challenges, homework tasks, and quizzes to cement learning.<br>
+          • <strong>Gamified Progress:</strong> Earn XP, level up, and build streaks to track learning growth.<br><br>
+          We will notify you at this email address the exact second we go live so you can secure your class slots and family dashboards before public release.
+        </p>
       `
       break
 
@@ -179,7 +196,7 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
           Hello ${data.name || 'Member'},
         </p>
         <p style="color: #2d3748; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
-          ${data.body || 'You have received a new update on your dashboard.'}
+          ${formattedBody || 'You have received a new update on your dashboard.'}
         </p>
         ${data.feedback ? `
           <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 24px; border-radius: 8px;">
@@ -233,11 +250,9 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
               </p>
               <div style="font-size: 11px; color: #a0aec0; border-top: 1px solid #edf2f7; padding-top: 12px; line-height: 16px;">
                 <strong>Contact Directory:</strong><br>
-                Admin: <a href="mailto:admin@damzynextgen.app" style="color: #718096; text-decoration: none;">admin@damzynextgen.app</a> | 
-                Finance: <a href="mailto:finance@damzynextgen.app" style="color: #718096; text-decoration: none;">finance@damzynextgen.app</a><br>
                 Support: <a href="mailto:support@damzynextgen.app" style="color: #718096; text-decoration: none;">support@damzynextgen.app</a> | 
-                General: <a href="mailto:hello@damzynextgen.app" style="color: #718096; text-decoration: none;">hello@damzynextgen.app</a><br>
-                Personal: <a href="mailto:damzyshittu1@gmail.com" style="color: #718096; text-decoration: none;">damzyshittu1@gmail.com</a>
+                General: <a href="mailto:hello@damzynextgen.app" style="color: #718096; text-decoration: none;">hello@damzynextgen.app</a> |
+                Finance: <a href="mailto:finance@damzynextgen.app" style="color: #718096; text-decoration: none;">finance@damzynextgen.app</a>
               </div>
             </td>
           </tr>

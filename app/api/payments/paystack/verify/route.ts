@@ -52,7 +52,13 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  if (payment.metadata && payment.metadata.studentId) {
+    const { User } = await import('@/models/User')
+    await User.updateOne({ _id: payment.metadata.studentId }, { status: 'active' })
+  }
+
   await notifyPaymentSuccess(session.userId, `${payment.currency} ${payment.amount}`)
 
   return ok({ status: 'succeeded' })
 }
+
