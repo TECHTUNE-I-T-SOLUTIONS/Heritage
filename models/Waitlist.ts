@@ -7,6 +7,8 @@ export interface IWaitlist {
   role: 'parent' | 'student'
   childrenCount?: number
   parentEmail?: string
+  timezone?: string
+  whatsappNumber?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -18,6 +20,8 @@ const WaitlistSchema = new Schema<IWaitlist>(
     role: { type: String, enum: ['parent', 'student'], required: true },
     childrenCount: { type: Number },
     parentEmail: { type: String },
+    timezone: { type: String },
+    whatsappNumber: { type: String },
   },
   { timestamps: true },
 )

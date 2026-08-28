@@ -16,7 +16,7 @@ import { initials } from '@/lib/format'
 import { apiPost } from '@/lib/client'
 
 type Icon = ComponentType<{ size?: number | string; className?: string }>
-type NavItem = [href: string, label: string, icon: Icon]
+type NavItem = [href: string, label: string, icon: Icon, reqAdminRole?: string]
 export type ShellRole = 'student' | 'parent' | 'educator' | 'admin'
 
 const roleLinks: Record<ShellRole, NavItem[]> = {
@@ -53,6 +53,7 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
     ['/dashboard/admin/students', 'Students', GraduationCap],
     ['/dashboard/admin/parents', 'Parents', Users],
     ['/dashboard/admin/educators', 'Educators', GraduationCap],
+    ['/dashboard/admin/admins', 'Admins', ShieldCheck, 'super'],
     ['/dashboard/admin/cohorts', 'Cohorts', Shapes],
     ['/dashboard/admin/curriculum', 'Curriculum', BookOpen],
     ['/dashboard/admin/lessons', 'Lessons', BookOpen],
@@ -82,6 +83,7 @@ export interface ShellUser {
   avatarUrl?: string
   userId?: string
   switchedFromParentName?: string
+  adminRole?: string
 }
 
 function Avatar({ user, size = 36, className = '' }: { user: ShellUser; size?: number; className?: string }) {
@@ -95,7 +97,7 @@ function Avatar({ user, size = 36, className = '' }: { user: ShellUser; size?: n
     fetch('/api/account')
       .then((r) => r.json())
       .then((j) => { if (alive && j?.data?.avatarUrl) setAvatarUrl(j.data.avatarUrl) })
-      .catch(() => {})
+      .catch(() => { })
     return () => { alive = false }
   }, [user.avatarUrl])
 
@@ -184,23 +186,28 @@ export function DashboardShell({ role, user, children }: { role: ShellRole; user
   const [collapsed, setCollapsed] = useState(false) // desktop rail
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
-  const links = roleLinks[role]
+  let links = roleLinks[role]
+
+  // Filter admin links if user is not super
+  if (role === 'admin' && user.adminRole !== 'super') {
+    links = links.filter((link) => link[3] !== 'super')
+  }
 
   // Restore collapsed preference.
   useEffect(() => {
-    try { setCollapsed(localStorage.getItem('hc-sidebar-collapsed') === '1') } catch {}
+    try { setCollapsed(localStorage.getItem('hc-sidebar-collapsed') === '1') } catch { }
   }, [])
   const toggleCollapsed = () => {
     setCollapsed((v) => {
       const next = !v
-      try { localStorage.setItem('hc-sidebar-collapsed', next ? '1' : '0') } catch {}
+      try { localStorage.setItem('hc-sidebar-collapsed', next ? '1' : '0') } catch { }
       return next
     })
   }
 
   async function doSignOut() {
     setSigningOut(true)
-    try { await apiPost('/api/auth/logout') } catch {}
+    try { await apiPost('/api/auth/logout') } catch { }
     router.push('/login')
   }
 

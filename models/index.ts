@@ -10,5 +10,4 @@ export * from './Attendance'
 export * from './ProfilePicture'
 export * from './Assessment'
 export * from './Waitlist'
-
-
+export * from './AdminInvite'

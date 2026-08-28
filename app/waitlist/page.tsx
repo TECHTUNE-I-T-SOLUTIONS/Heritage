@@ -9,7 +9,7 @@ import { Field, Input, Select } from '@/components/ui/form'
 export default function WaitlistPage() {
   const statusRes = useApi<{ launched: boolean; launchDate: string | null }>('/api/waitlist/status')
   
-  const [form, setForm] = useState({ name: '', email: '', role: 'parent', childrenCount: 1, parentEmail: '' })
+  const [form, setForm] = useState({ name: '', email: '', role: 'parent', childrenCount: 1, parentEmail: '', timezone: 'America/New_York', whatsappNumber: '' })
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +46,11 @@ export default function WaitlistPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (form.whatsappNumber && !/^\+?[1-9]\d{1,14}$/.test(form.whatsappNumber)) {
+      return setError('Please provide a valid WhatsApp number with country code (e.g. +123456789).')
+    }
+
     setBusy(true)
 
     try {
@@ -55,6 +60,8 @@ export default function WaitlistPage() {
         role: form.role,
         childrenCount: form.role === 'parent' ? Number(form.childrenCount) : undefined,
         parentEmail: form.role === 'student' && form.parentEmail ? form.parentEmail : undefined,
+        timezone: form.timezone,
+        whatsappNumber: form.whatsappNumber || undefined,
       })
       setDone(true)
     } catch (err) {
@@ -112,6 +119,20 @@ export default function WaitlistPage() {
                 </Field>
                 <Field label="Email Address">
                   <Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" className="bg-[#141722] border-white/10 text-white" />
+                </Field>
+                <Field label="WhatsApp Number (Optional)">
+                  <Input type="tel" value={form.whatsappNumber} onChange={(e) => setForm({ ...form, whatsappNumber: e.target.value })} placeholder="+1234567890" className="bg-[#141722] border-white/10 text-white" />
+                </Field>
+                <Field label="Timezone">
+                  <Select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className="bg-[#141722] border-white/10 text-white">
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="Europe/London">London (GMT/BST)</option>
+                    <option value="Europe/Paris">Central Europe (CET)</option>
+                    <option value="Africa/Lagos">West Africa (WAT)</option>
+                  </Select>
                 </Field>
                 <Field label="Who are you?">
                   <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="bg-[#141722] border-white/10 text-white">

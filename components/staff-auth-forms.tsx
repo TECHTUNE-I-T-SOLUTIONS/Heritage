@@ -71,9 +71,20 @@ export function StaffLoginForm({ portal }: { portal: Portal }) {
 
 /* ---------------- Signup ---------------- */
 
-export function StaffSignupForm({ portal }: { portal: Portal }) {
+function StaffSignupInner({ portal }: { portal: Portal }) {
   const router = useRouter()
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '', phone: '', country: '', timezone: '', bio: '', code: '' })
+  const params = useSearchParams()
+  const [form, setForm] = useState({ 
+    fullName: '', 
+    email: params.get('email') ?? '', 
+    password: '', 
+    confirm: '', 
+    phone: '', 
+    country: '', 
+    timezone: '', 
+    bio: '', 
+    code: params.get('code') ?? '' 
+  })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value })
@@ -143,6 +154,14 @@ export function StaffSignupForm({ portal }: { portal: Portal }) {
         <div className="sm:col-span-2"><button disabled={loading} className={`${btn} w-full`}>{loading ? 'Creating account…' : `Create ${label[portal].toLowerCase()} account`}</button></div>
       </form>
     </StaffAuthSplit>
+  )
+}
+
+export function StaffSignupForm({ portal }: { portal: Portal }) {
+  return (
+    <Suspense fallback={null}>
+      <StaffSignupInner portal={portal} />
+    </Suspense>
   )
 }
 

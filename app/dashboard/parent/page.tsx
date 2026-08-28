@@ -1,4 +1,5 @@
 "use client"
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Users, Trophy, Flame, BookOpen, ArrowRight, UserPlus, LogIn } from 'lucide-react'
 import { useApi, apiPost } from '@/lib/client'

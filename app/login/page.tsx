@@ -38,18 +38,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Redirect to waitlist if not launched yet
-  useEffect(() => {
-    fetch('/api/waitlist/status')
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.data && !j.data.launched) {
-          router.push('/waitlist')
-        }
-      })
-      .catch(() => {})
-  }, [router])
-
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -99,8 +87,8 @@ export default function LoginPage() {
           <span className="mt-2 block text-muted-foreground">
             Staff?{' '}
             <Link href="/educator/login" className="underline underline-offset-4 hover:text-foreground">Educator</Link>
-            {' · '}
-            <Link href="/admin/login" className="underline underline-offset-4 hover:text-foreground">Admin</Link>
+            {/* {' · '} */}
+            {/* <Link href="/admin/login" className="underline underline-offset-4 hover:text-foreground">Admin</Link> */}
           </span>
         </p>
       }

@@ -17,6 +17,7 @@ interface UserRow extends Record<string, unknown> {
   role: string
   status: string
   age: number | null
+  timezone: string | null
   xp: number
   cohortCode: string | null
   createdAt: string
@@ -129,9 +130,15 @@ export function AdminUsers({
   const columns: Column<UserRow>[] = [
     { key: 'fullName', header: 'Name', render: (r) => <div><p className="font-medium">{r.fullName}</p><p className="text-xs text-muted-foreground">{r.email}</p></div> },
     ...(showRole ? [{ key: 'role', header: 'Role', render: (r: UserRow) => <span className="capitalize">{r.role}</span> } as Column<UserRow>] : []),
-    ...(showAge ? [{ key: 'age', header: 'Age', render: (r: UserRow) => r.age ?? '—' } as Column<UserRow>] : []),
+    ...(showAge ? [
+      { key: 'age', header: 'Age', render: (r: UserRow) => r.age ?? '—' } as Column<UserRow>,
+      { key: 'ageBand', header: 'Age Band', render: (r: UserRow) => r.age ? (r.age <= 12 ? '8-12' : '13-16') : '—' } as Column<UserRow>
+    ] : []),
     ...(showXp ? [{ key: 'xp', header: 'XP', render: (r: UserRow) => r.xp.toLocaleString() } as Column<UserRow>] : []),
-    ...(role === 'student' ? [{ key: 'cohortCode', header: 'Cohort', render: (r: UserRow) => r.cohortCode ?? '—' } as Column<UserRow>] : []),
+    ...(role === 'student' ? [
+      { key: 'timezone', header: 'Timezone', render: (r: UserRow) => r.timezone ? r.timezone.split('/')[1]?.replace('_', ' ') || r.timezone : '—' } as Column<UserRow>,
+      { key: 'cohortCode', header: 'Cohort', render: (r: UserRow) => r.cohortCode ?? '—' } as Column<UserRow>
+    ] : []),
     { key: 'createdAt', header: 'Joined', render: (r) => formatDate(r.createdAt) },
     { key: 'status', header: 'Status', render: (r) => <Badge tone={statusTone(r.status)}>{r.status}</Badge> },
     {

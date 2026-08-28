@@ -6,6 +6,7 @@ export type AccountStatus = 'active' | 'suspended' | 'deactivated' | 'pending'
 export interface IUser {
   _id: Types.ObjectId
   role: Role
+  adminRole?: 'super' | 'admin' | 'sub'
   status: AccountStatus
   email: string
   passwordHash: string
@@ -42,6 +43,7 @@ export interface IUser {
 const UserSchema = new Schema<IUser>(
   {
     role: { type: String, enum: ['student', 'parent', 'educator', 'admin'], required: true, index: true },
+    adminRole: { type: String, enum: ['super', 'admin', 'sub'] },
     status: { type: String, enum: ['active', 'suspended', 'deactivated', 'pending'], default: 'active', index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: true },

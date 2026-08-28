@@ -15,13 +15,16 @@ interface MailData {
   feedback?: string
   score?: number
   maxScore?: number
+  code?: string
+  email?: string
 }
 
 interface MailOptions {
   to: string | string[]
   subject: string
-  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist'
+  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist' | 'cohort_assignment' | 'admin_invite'
   data: MailData
+  body?: string
   fromAlias?: 'support' | 'finance' | 'admin' | 'hello' | 'no-reply'
   attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }>
 }
@@ -184,8 +187,41 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
           • <strong>Cultural Learning Journey:</strong> A premium, custom-designed curriculum celebrating heritage and history.<br>
           • <strong>Interactive Assignments & Quizzes:</strong> Fun challenges, homework tasks, and quizzes to cement learning.<br>
           • <strong>Gamified Progress:</strong> Earn XP, level up, and build streaks to track learning growth.<br><br>
-          We will notify you at this email address the exact second we go live so you can secure your class slots and family dashboards before public release.
+          We will notify you at this email address the exact second we go live so you can secure your class slots and family dashboards before public release.<br><br>
+          When we officially launch, you will be able to enroll and secure your spot directly at:<br>
+          <a href="https://heritage.damzynextgen.app/" style="color: #2b6cb0; text-decoration: underline;">https://heritage.damzynextgen.app/</a>
         </p>
+      `
+      break
+
+    case 'cohort_assignment':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px; font-family: 'Playfair Display', Georgia, serif;">You've been assigned to a Cohort! 🎉</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin-bottom: 24px;">
+          Hello ${data.name || 'Student'},<br><br>
+          We are thrilled to let you know that you have been officially assigned to a learning cohort in Heritage Club!<br><br>
+          ${formattedBody || ''}<br><br>
+          Your cohort represents your core learning group. You will attend weekend live sessions and participate in community events with your peers in this cohort.<br><br>
+          Log in to your student dashboard to meet your educator, view your upcoming class schedule, and start your cultural learning journey.
+        </p>
+        <a href="${websiteUrl}/login" style="background-color: #2b6cb0; color: #ffffff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 24px;">
+          Go to Dashboard
+        </a>
+      `
+      break
+
+    case 'admin_invite':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px; font-family: 'Playfair Display', Georgia, serif;">You're Invited to Manage Heritage Club</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin-bottom: 24px;">
+          Hello,<br><br>
+          You have been invited by a Super Admin to join the Heritage Club administrative team.<br><br>
+          ${formattedBody || ''}<br><br>
+          Please click the button below to accept your invitation and set up your admin account. You will need your invite code to complete the registration.
+        </p>
+        <a href="${websiteUrl}/admin/signup${data.code ? `?code=${data.code}&email=${encodeURIComponent(data.email || '')}` : ''}" style="background-color: #2b6cb0; color: #ffffff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 24px;">
+          Accept Invitation
+        </a>
       `
       break
 

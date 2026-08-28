@@ -10,6 +10,8 @@ const postSchema = z.object({
   role: z.enum(['parent', 'student']),
   childrenCount: z.number().optional(),
   parentEmail: z.string().optional(),
+  timezone: z.string().optional(),
+  whatsappNumber: z.string().optional(),
 })
 
 export async function POST(request: Request) {
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
 
   await connectToDatabase()
 
-  const { name, email, role, childrenCount, parentEmail } = parsed.data
+  const { name, email, role, childrenCount, parentEmail, timezone, whatsappNumber } = parsed.data
 
   const existing = await Waitlist.findOne({ email }).lean()
   if (existing) return fail('You are already registered on our waitlist!', 409)
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
     role,
     childrenCount,
     parentEmail,
+    timezone,
+    whatsappNumber,
   })
 
   // Send automated professional waitlist welcome email

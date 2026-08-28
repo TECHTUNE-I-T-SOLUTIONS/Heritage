@@ -56,17 +56,7 @@ export default function EnrollPage() {
 
   const [dbPlans, setDbPlans] = useState<any[]>([])
 
-  useEffect(() => {
-    // Check waitlist status
-    fetch('/api/waitlist/status')
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.data && !j.data.launched) {
-          router.push('/waitlist')
-        }
-      })
-      .catch(() => {})
-  }, [router])
+
 
   useEffect(() => {
     fetch('/api/plans')

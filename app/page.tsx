@@ -129,7 +129,13 @@ export default function Page() {
         </div>
       )}
 
-      <section className="relative isolate overflow-hidden px-5 pb-20 pt-26 sm:px-8 sm:pb-28 sm:pt-24"><HeroVideoBackground /><div className="mx-auto grid max-w-7xl items-end gap-14 lg:grid-cols-[1.05fr_.95fr]"><div><p className="mb-7 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-accent"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> A learning home for the next generation</p><h1 className="max-w-4xl text-balance font-serif text-5xl leading-[.98] tracking-[-.045em] text-white sm:text-7xl lg:text-[6.5rem]">Know your story.<br /><span className="text-white/60">Shape what’s next.</span></h1><p className="mt-8 max-w-lg text-base leading-7 text-white/80 sm:text-lg">Heritage Club is a modern learning community helping young people connect with their culture, their families, and the future they’re building.</p><div className="mt-9 flex flex-wrap gap-3"><Button href="/enroll" variant="light">Enroll Now <ArrowRight className="h-4 w-4" /></Button><Button href="/login" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10"><Play className="h-4 w-4" /> Sign In</Button></div>
+      <section className="relative isolate overflow-hidden px-5 pb-20 pt-26 sm:px-8 sm:pb-28 sm:pt-24"><HeroVideoBackground /><div className="mx-auto grid max-w-7xl items-end gap-14 lg:grid-cols-[1.05fr_.95fr]"><div><p className="mb-7 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-accent"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> A learning home for the next generation</p><h1 className="max-w-4xl text-balance font-serif text-5xl leading-[.98] tracking-[-.045em] text-white sm:text-7xl lg:text-[6.5rem]">Know your story.<br /><span className="text-white/60">Shape what’s next.</span></h1><p className="mt-8 max-w-lg text-base leading-7 text-white/80 sm:text-lg">Heritage Club is a modern learning community helping young people connect with their culture, their families, and the future they’re building.</p><div className="mt-9 flex flex-wrap gap-3">
+        <Button href="/enroll" variant="light">Enroll Now <ArrowRight className="h-4 w-4" /></Button>
+        {!launched && (
+          <Button href="/waitlist" variant="outline" className="!border-accent !text-accent hover:!bg-accent/10">Join Waitlist</Button>
+        )}
+        <Button href="/login" variant="outline" className="!border-white/40 !text-white hover:!bg-white/10"><Play className="h-4 w-4" /> Sign In</Button>
+      </div>
         <div className="mt-12 flex items-center gap-3 text-xs text-white/70">
           <div className="flex -space-x-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/30 bg-accent text-[10px] font-bold">AJ</span>
