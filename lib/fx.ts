@@ -16,7 +16,7 @@
 // Used only when the live rate lookup fails (e.g. no network).
 const FALLBACK_CAD_RATES: Record<string, number> = {
   CAD: 1,
-  NGN: 1200,
+  NGN: 980, // Updated to more accurate rate (~1100 NGN per CAD)
   GHS: 11,
   ZAR: 13,
   KES: 95,

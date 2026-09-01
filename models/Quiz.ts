@@ -13,6 +13,7 @@ export interface IQuiz {
   title: string
   description?: string
   pillar?: Types.ObjectId
+  module?: Types.ObjectId
   cohort?: Types.ObjectId | null
   createdBy?: Types.ObjectId
   questions: IQuizQuestion[]
@@ -27,6 +28,7 @@ const QuizSchema = new Schema<IQuiz>(
     title: { type: String, required: true, trim: true },
     description: { type: String },
     pillar: { type: Schema.Types.ObjectId, ref: 'Pillar' },
+    module: { type: Schema.Types.ObjectId, ref: 'Module' },
     cohort: { type: Schema.Types.ObjectId, ref: 'Cohort', default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     questions: [

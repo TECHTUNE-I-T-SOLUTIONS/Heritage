@@ -17,12 +17,14 @@ interface MailData {
   maxScore?: number
   code?: string
   email?: string
+  resetToken?: string
+  portal?: string
 }
 
 interface MailOptions {
   to: string | string[]
   subject: string
-  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist' | 'cohort_assignment' | 'admin_invite'
+  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist' | 'cohort_assignment' | 'admin_invite' | 'password_reset' | 'child_welcome'
   data: MailData
   body?: string
   fromAlias?: 'support' | 'finance' | 'admin' | 'hello' | 'no-reply'
@@ -222,6 +224,88 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
         <a href="${websiteUrl}/admin/signup${data.code ? `?code=${data.code}&email=${encodeURIComponent(data.email || '')}` : ''}" style="background-color: #2b6cb0; color: #ffffff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 24px;">
           Accept Invitation
         </a>
+      `
+      break
+
+    case 'password_reset':
+      const resetUrl = data.portal 
+        ? `${websiteUrl}/staff/reset-password?portal=${data.portal}&email=${encodeURIComponent(data.email || '')}&token=${data.resetToken}`
+        : `${websiteUrl}/reset-password?email=${encodeURIComponent(data.email || '')}&token=${data.resetToken}`
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 28px; margin-bottom: 16px; font-family: 'Playfair Display', Georgia, serif;">Reset Your Password</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
+          Hello ${data.name || 'there'},<br><br>
+          We received a request to reset your password for your Heritage Club account. If you didn't make this request, you can safely ignore this email.<br><br>
+          To reset your password, click the button below. This link will expire in 1 hour for your security.
+        </p>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+          <tr>
+            <td align="center" style="border-radius: 8px; background-color: #2b6cb0;">
+              <a href="${resetUrl}" target="_blank" style="font-size: 16px; font-family: sans-serif; font-weight: bold; color: #ffffff; text-decoration: none; padding: 14px 32px; border: 1px solid #2b6cb0; border-radius: 8px; display: inline-block;">
+                Reset Password
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="color: #718096; font-size: 14px; line-height: 20px; margin-bottom: 16px;">
+          If the button doesn't work, you can copy and paste this link into your browser:
+        </p>
+        <p style="color: #718096; font-size: 13px; line-height: 18px; word-break: break-all; background-color: #f7fafc; padding: 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
+          <a href="${resetUrl}" style="color: #2b6cb0; text-decoration: none;">${resetUrl}</a>
+        </p>
+        <p style="color: #718096; font-size: 13px; line-height: 20px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          For security reasons, this link will expire in 1 hour. After that, you'll need to request a new password reset.
+        </p>
+      `
+      break
+
+    case 'child_welcome':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px;">Welcome to Heritage Club! 🎉</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
+          Hello ${data.name || 'there'},<br><br>
+          Your parent has added you to Heritage Club! We are excited to have you join our cultural learning community. Your account has been successfully created and you're ready to start your learning journey.
+        </p>
+        <div style="background-color: #f7fafc; border-left: 4px solid #2b6cb0; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Your Login:</strong> ${data.email || 'your email'}</p>
+          <p style="margin: 0; color: #2d3748;"><strong>Password:</strong> The password your parent set for you</p>
+        </div>
+        <a href="${websiteUrl}/login" style="background-color: #2b6cb0; color: #ffffff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 24px;">
+          Log In to Your Student Dashboard
+        </a>
+        <p style="color: #718096; font-size: 14px; line-height: 20px;">
+          Once you log in, you'll be able to see your classes, assignments, quizzes, and track your progress through our gamified learning system. If you need help logging in, ask your parent or contact our support team at <a href="mailto:support@damzynextgen.app" style="color: #2b6cb0;">support@damzynextgen.app</a>.
+        </p>
+      `
+      break
+
+    case 'class_scheduled':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px;">New Class Scheduled! 📚</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
+          Hello ${data.name || 'there'},<br><br>
+          A new live class has been scheduled for your cohort. Mark your calendar and join us for an engaging learning session!
+        </p>
+        <div style="background-color: #f7fafc; border-left: 4px solid #2b6cb0; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Class Title:</strong> ${data.classTitle || 'Live Class Session'}</p>
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Date:</strong> ${data.date || 'TBD'}</p>
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Time:</strong> ${data.time || 'TBD'}</p>
+          <p style="margin: 0; color: #2d3748;"><strong>Week:</strong> ${data.week || 'N/A'}</p>
+        </div>
+        ${data.meetingLink ? `
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+          <tr>
+            <td align="center" style="border-radius: 8px; background-color: #2b6cb0;">
+              <a href="${data.meetingLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; font-weight: bold; color: #ffffff; text-decoration: none; padding: 14px 32px; border: 1px solid #2b6cb0; border-radius: 8px; display: inline-block;">
+                Join Live Class (Zoom/Meet)
+              </a>
+            </td>
+          </tr>
+        </table>
+        ` : ''}
+        <p style="color: #718096; font-size: 14px; line-height: 20px;">
+          Make sure to join a few minutes early to test your connection. If you have any issues, contact your educator or support at <a href="mailto:support@damzynextgen.app" style="color: #2b6cb0;">support@damzynextgen.app</a>.
+        </p>
       `
       break
 

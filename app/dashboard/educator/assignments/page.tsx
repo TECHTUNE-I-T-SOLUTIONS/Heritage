@@ -5,11 +5,13 @@ import { FileText, Plus } from 'lucide-react'
 import { useApi, apiPost, apiPatch } from '@/lib/client'
 import { PageHeading, Card, EmptyState, Skeleton, Badge } from '@/components/ui/kit'
 import { Modal, Tabs, useToast } from '@/components/ui/interactive'
-import { Field, Input, Textarea } from '@/components/ui/form'
+import { Field, Input, Textarea, Select } from '@/components/ui/form'
 import { formatDate } from '@/lib/format'
 
 interface AssignmentRow { id: string; title: string; instructions: string; dueDate: string | null; xpReward: number; status: string }
 interface SubmissionRow { id: string; studentName: string; assignmentTitle: string; status: string; moderation: string; grade: number | null; feedback: string | null; note: string | null; files: { kind: string; name?: string; url: string }[]; submittedAt: string | null }
+interface Pillar { id: string; title: string }
+interface Module { id: string; title: string; pillar: string }
 
 export default function EducatorAssignments() {
   const [tab, setTab] = useState('assignments')
@@ -17,10 +19,12 @@ export default function EducatorAssignments() {
 
   const assignments = useApi<AssignmentRow[]>('/api/educator/assignments')
   const submissions = useApi<SubmissionRow[]>('/api/educator/submissions')
+  const pillars = useApi<Pillar[]>('/api/curriculum/pillars')
+  const modules = useApi<Module[]>('/api/curriculum/modules')
 
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [form, setForm] = useState({ title: '', instructions: '', dueDate: '', xpReward: 150 })
+  const [form, setForm] = useState({ title: '', instructions: '', dueDate: '', xpReward: 150, pillarId: '', moduleId: '' })
 
   const [grading, setGrading] = useState<SubmissionRow | null>(null)
   const [grade, setGrade] = useState('')
@@ -35,9 +39,15 @@ export default function EducatorAssignments() {
     if (!form.title.trim() || !form.instructions.trim()) return push('Add a title and instructions.', 'error')
     setBusy(true)
     try {
-      await apiPost('/api/educator/assignments', { ...form, xpReward: Number(form.xpReward), allowedTypes: ['document', 'image', 'link'] })
+      await apiPost('/api/educator/assignments', { 
+        ...form, 
+        xpReward: Number(form.xpReward), 
+        pillarId: form.pillarId || undefined,
+        moduleId: form.moduleId || undefined,
+        allowedTypes: ['document', 'image', 'link'] 
+      })
       push('Assignment created.')
-      setOpen(false); setForm({ title: '', instructions: '', dueDate: '', xpReward: 150 }); assignments.refetch()
+      setOpen(false); setForm({ title: '', instructions: '', dueDate: '', xpReward: 150, pillarId: '', moduleId: '' }); assignments.refetch()
     } catch (e) {
       push(e instanceof Error ? e.message : 'Could not create', 'error')
     } finally { setBusy(false) }
@@ -158,6 +168,24 @@ export default function EducatorAssignments() {
         <div className="space-y-4">
           <Field label="Title"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
           <Field label="Instructions"><Textarea value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} /></Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Pillar (Optional)">
+              <Select value={form.pillarId} onChange={(e) => setForm({ ...form, pillarId: e.target.value, moduleId: '' })}>
+                <option value="">Select Pillar</option>
+                {pillars.data?.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Module (Optional)">
+              <Select value={form.moduleId} onChange={(e) => setForm({ ...form, moduleId: e.target.value })} disabled={!form.pillarId}>
+                <option value="">Select Module</option>
+                {modules.data?.filter((m) => m.pillar === form.pillarId).map((m) => (
+                  <option key={m.id} value={m.id}>{m.title}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
           <Field label="Due date"><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></Field>
           <Field label="XP reward"><Input type="number" value={form.xpReward} onChange={(e) => setForm({ ...form, xpReward: Number(e.target.value) })} /></Field>
         </div>

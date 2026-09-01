@@ -1,11 +1,10 @@
 "use client"
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Users, Trophy, Flame, BookOpen, ArrowRight, UserPlus, LogIn } from 'lucide-react'
+import { Users, Trophy, Flame, BookOpen, ArrowRight, LogIn } from 'lucide-react'
 import { useApi, apiPost } from '@/lib/client'
 import { PageHeading, Card, StatCard, ProgressBar, EmptyState, SkeletonCards, Badge } from '@/components/ui/kit'
-import { Modal, useToast } from '@/components/ui/interactive'
-import { Field, Input } from '@/components/ui/form'
+import { useToast } from '@/components/ui/interactive'
 import { formatCurrency } from '@/lib/format'
 
 interface ChildCard {
@@ -26,60 +25,31 @@ interface ChildCard {
 interface Overview {
   children: ChildCard[]
   subscription: { planKey: string; price: number; status: string; childrenCount: number; cancelAtPeriodEnd: boolean } | null
+  childSubscriptions?: Array<{
+    id: string
+    planKey: string
+    price: number
+    currency: string
+    status: string
+    childName: string
+    childPreferredName: string | null
+  }>
+  childPayments?: Array<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    childName: string
+    paymentType: string
+  }>
 }
 
 export default function ParentOverview() {
   const { data, loading, error, refetch } = useApi<Overview>('/api/parent')
   const { push } = useToast()
 
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [form, setForm] = useState({ fullName: '', preferredName: '', email: '', password: '', age: 10 })
-
-  // Dynamic pricing settings
-  const [pricingConfig, setPricingConfig] = useState({ basePrice: 70, discounts: [10, 5, 5] })
-
-  useEffect(() => {
-    fetch('/api/plans')
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.data?.config) setPricingConfig(j.data.config)
-      })
-      .catch(() => {})
-  }, [])
-
-  // Calculate sibling price based on current children count
-  const currentCount = data?.children.length ?? 0
-  let addPrice = pricingConfig.basePrice
-  if (currentCount === 1) addPrice = pricingConfig.basePrice - (pricingConfig.discounts[0] ?? 0)
-  else if (currentCount === 2) addPrice = pricingConfig.basePrice - (pricingConfig.discounts[1] ?? 0)
-  else if (currentCount >= 3) addPrice = pricingConfig.basePrice - (pricingConfig.discounts[2] ?? 0)
-
   const totalXp = data?.children.reduce((s, c) => s + c.xp, 0) ?? 0
   const bestStreak = data?.children.reduce((s, c) => Math.max(s, c.streak), 0) ?? 0
-
-  async function handleAddChild() {
-    if (!form.fullName.trim() || !form.email.trim() || form.password.length < 8) {
-      return push('Please complete all fields. Password must be at least 8 characters.', 'error')
-    }
-
-    setBusy(true)
-    try {
-      const res = await apiPost<{ authorizationUrl?: string; simulated?: boolean }>('/api/parent/children', form)
-      
-      if (res.simulated) {
-        push(`${form.fullName} added successfully (Simulated payment)!`)
-        setOpen(false)
-        setForm({ fullName: '', preferredName: '', email: '', password: '', age: 10 })
-        refetch()
-      } else if (res.authorizationUrl) {
-        push('Redirecting to checkout payment page...')
-        window.location.href = res.authorizationUrl
-      }
-    } catch (e) {
-      push(e instanceof Error ? e.message : 'Could not add child', 'error')
-    } finally { setBusy(false) }
-  }
 
   async function handleSwitchToChild(childId: string) {
     try {
@@ -98,9 +68,9 @@ export default function ParentOverview() {
         title="A clearer view of your family's journey."
         description="Support the moments that make learning stick."
         action={
-          <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground font-semibold">
-            <UserPlus className="h-4 w-4" /> Add Child
-          </button>
+          <Link href="/dashboard/parent/children/add" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground font-semibold">
+            <Users className="h-4 w-4" /> Add Child
+          </Link>
         }
       />
 
@@ -160,32 +130,51 @@ export default function ParentOverview() {
               </Card>
             ))}
           </div>
+
+          {/* Child Subscriptions Section */}
+          {data.childSubscriptions && data.childSubscriptions.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-serif text-2xl mb-4">Child Subscriptions</h3>
+              <p className="text-sm text-muted-foreground mb-4">Individual subscriptions for children who enrolled independently before being linked to your account.</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                {data.childSubscriptions.map((childSub) => (
+                  <Card key={childSub.id}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-serif text-lg">{childSub.childPreferredName || childSub.childName}</h4>
+                        <Badge tone={childSub.status === 'active' ? 'success' : 'warning'} className="mt-1 text-xs">{childSub.status}</Badge>
+                      </div>
+                      <p className="font-medium">{formatCurrency(childSub.price, childSub.currency)}<span className="text-xs text-muted-foreground"> / month</span></p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Child Payments Section */}
+          {data.childPayments && data.childPayments.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-serif text-2xl mb-4">Recent Child Payments</h3>
+              <p className="text-sm text-muted-foreground mb-4">Individual payments for children who enrolled independently and payments for additional children.</p>
+              <div className="space-y-3">
+                {data.childPayments.slice(0, 5).map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div>
+                      <p className="font-medium">{payment.childName}</p>
+                      <p className="text-sm text-muted-foreground">{payment.paymentType === 'subscription' ? 'Subscription' : 'Individual Child'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(payment.amount, payment.currency)}</p>
+                      <Badge tone={payment.status === 'succeeded' ? 'success' : payment.status === 'pending' ? 'warning' : 'error'} className="text-xs">{payment.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
-
-      {/* Add Child Modal */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Enroll Sibling Child" footer={
-        <>
-          <button onClick={() => setOpen(false)} className="rounded-full border border-border px-5 py-2.5 text-sm">Cancel</button>
-          <button onClick={handleAddChild} disabled={busy} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground disabled:opacity-60 font-semibold">{busy ? 'Redirecting…' : `Pay ${formatCurrency(addPrice)} & Add`}</button>
-        </>
-      }>
-        <div className="space-y-4">
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 text-sm leading-relaxed mb-2 text-yellow-500">
-            <strong>Child addition rate:</strong> {formatCurrency(addPrice)} / month.<br />
-            {currentCount > 0 && <span>Sibling discount applied dynamically based on total child count.</span>}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Child's Full Name"><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Abidemi Kolawole" /></Field>
-            <Field label="Preferred Name"><Input value={form.preferredName} onChange={(e) => setForm({ ...form, preferredName: e.target.value })} placeholder="Abi" /></Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Direct Login Username"><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="abidemi" /></Field>
-            <Field label="Child password"><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" /></Field>
-          </div>
-          <Field label="Age"><Input type="number" min={3} max={19} value={form.age} onChange={(e) => setForm({ ...form, age: Number(e.target.value) })} /></Field>
-        </div>
-      </Modal>
     </>
   )
 }

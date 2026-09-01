@@ -18,6 +18,8 @@ export async function GET() {
 const schema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  pillarId: z.string().optional(),
+  moduleId: z.string().optional(),
   xpReward: z.number().min(0).default(100),
   status: z.enum(['draft', 'published', 'archived']).default('published'),
   questions: z
@@ -40,7 +42,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return fail('Please provide a title and at least one question.', 422)
 
   await connectToDatabase()
-  const quiz = await Quiz.create({ ...parsed.data, createdBy: session.userId })
+  const { pillarId, moduleId, ...quizData } = parsed.data
+  const quiz = await Quiz.create({ 
+    ...quizData, 
+    createdBy: session.userId,
+    pillar: pillarId,
+    module: moduleId
+  })
   return ok({ id: String(quiz._id) }, { status: 201 })
 }
 

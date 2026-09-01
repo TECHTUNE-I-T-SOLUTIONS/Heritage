@@ -57,7 +57,6 @@ export const AVAILABILITY_OPTIONS = [
   'Sunday morning',
   'Sunday afternoon',
   'Sunday evening',
-  'Weekday evening',
 ] as const
 
 export const RELATIONSHIPS = ['Parent', 'Guardian', 'Grandparent', 'Other family'] as const

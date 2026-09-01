@@ -21,10 +21,14 @@ interface Row extends Record<string, unknown> {
 }
 
 interface Cohort { id: string; code: string; name: string }
+interface Pillar { id: string; title: string }
+interface Module { id: string; title: string; pillar: string }
 
 export default function EducatorStudents() {
   const { data, loading, error, refetch } = useApi<Row[]>('/api/educator/students')
   const overview = useApi<{ cohorts: Cohort[] }>('/api/educator')
+  const pillars = useApi<Pillar[]>('/api/curriculum/pillars')
+  const modules = useApi<Module[]>('/api/curriculum/modules')
   const { push } = useToast()
   const [busy, setBusy] = useState(false)
 
@@ -32,6 +36,14 @@ export default function EducatorStudents() {
   const [attOpen, setAttOpen] = useState(false)
   const [attCohort, setAttCohort] = useState('')
   const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0])
+  const [attWeek, setAttWeek] = useState(1)
+  const [attSession, setAttSession] = useState(1)
+  const [attPillar, setAttPillar] = useState('')
+  const [attModule, setAttModule] = useState('')
+  const [attCustomTitle, setAttCustomTitle] = useState('')
+  const [attMeetingLink, setAttMeetingLink] = useState('')
+  const [attRecordingLink, setAttRecordingLink] = useState('')
+  const [attNotifyStudents, setAttNotifyStudents] = useState(false)
   const [attRecords, setAttRecords] = useState<Record<string, { status: 'present' | 'absent' | 'late' | 'excused'; note: string }>>({})
 
   // Assessment states
@@ -48,6 +60,7 @@ export default function EducatorStudents() {
   // Initialize attendance records when cohort changes
   function handleCohortChange(cohortId: string) {
     setAttCohort(cohortId)
+    setAttNotifyStudents(false)
     const code = cohorts.find((c) => c.id === cohortId)?.code
     const filtered = data?.filter((s) => s.cohortCode === code) ?? []
     const records: typeof attRecords = {}
@@ -69,10 +82,19 @@ export default function EducatorStudents() {
       await apiPost('/api/educator/attendance', {
         cohortId: attCohort,
         sessionDate: attDate,
+        week: attWeek,
+        session: attSession,
+        pillarId: attPillar || undefined,
+        moduleId: attModule || undefined,
+        customTitle: attCustomTitle || undefined,
+        meetingLink: attMeetingLink || undefined,
+        recordingLink: attRecordingLink || undefined,
+        notifyStudents: attNotifyStudents,
         records: recordsPayload,
       })
       push('Attendance logged and XP awarded.')
       setAttOpen(false)
+      setAttNotifyStudents(false)
       refetch()
     } catch (e) {
       push(e instanceof Error ? e.message : 'Could not log attendance', 'error')
@@ -176,9 +198,64 @@ export default function EducatorStudents() {
               ))}
             </Select>
           </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Week (1-16)">
+              <Select value={attWeek.toString()} onChange={(e) => setAttWeek(Number(e.target.value))}>
+                {Array.from({ length: 16 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Session (1-2)">
+              <Select value={attSession.toString()} onChange={(e) => setAttSession(Number(e.target.value))}>
+                <option value="1">Session 1 (Saturday)</option>
+                <option value="2">Session 2 (Sunday)</option>
+              </Select>
+            </Field>
+          </div>
           <Field label="Session Date">
             <Input type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
           </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Pillar (Optional)">
+              <Select value={attPillar} onChange={(e) => { setAttPillar(e.target.value); setAttModule('') }}>
+                <option value="">Select Pillar</option>
+                {pillars.data?.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Module (Optional)">
+              <Select value={attModule} onChange={(e) => setAttModule(e.target.value)} disabled={!attPillar}>
+                <option value="">Select Module</option>
+                {modules.data?.filter((m) => m.pillar === attPillar).map((m) => (
+                  <option key={m.id} value={m.id}>{m.title}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="Custom Class Title (Optional)">
+            <Input value={attCustomTitle} onChange={(e) => setAttCustomTitle(e.target.value)} placeholder="Override default lesson title" />
+          </Field>
+          <Field label="Meeting Link (Google Meet/Zoom)">
+            <Input value={attMeetingLink} onChange={(e) => setAttMeetingLink(e.target.value)} placeholder="https://meet.google.com/..." />
+          </Field>
+          <Field label="Recording Link (After Class)">
+            <Input value={attRecordingLink} onChange={(e) => setAttRecordingLink(e.target.value)} placeholder="https://youtube.com/..." />
+          </Field>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="attNotifyStudents"
+              checked={attNotifyStudents}
+              onChange={(e) => setAttNotifyStudents(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            <label htmlFor="attNotifyStudents" className="text-sm text-muted-foreground">
+              Notify all students via email about this class update
+            </label>
+          </div>
 
           {attStudents.length > 0 && (
             <div className="mt-4 border-t border-border pt-4">

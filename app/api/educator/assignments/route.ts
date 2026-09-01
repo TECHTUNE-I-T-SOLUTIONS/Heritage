@@ -26,6 +26,8 @@ export async function GET() {
 const schema = z.object({
   title: z.string().min(1),
   instructions: z.string().min(1),
+  pillarId: z.string().optional(),
+  moduleId: z.string().optional(),
   dueDate: z.string().optional(),
   allowedTypes: z.array(z.string()).default([]),
   xpReward: z.number().min(0).default(150),
@@ -40,8 +42,14 @@ export async function POST(request: Request) {
   if (!parsed.success) return fail('Please provide a title and instructions.', 422)
 
   await connectToDatabase()
-  const { dueDate, ...rest } = parsed.data
-  const assignment = await Assignment.create({ ...rest, dueDate: dueDate ? new Date(dueDate) : undefined, createdBy: session.userId })
+  const { dueDate, pillarId, moduleId, ...rest } = parsed.data
+  const assignment = await Assignment.create({ 
+    ...rest, 
+    dueDate: dueDate ? new Date(dueDate) : undefined, 
+    createdBy: session.userId,
+    pillar: pillarId,
+    module: moduleId
+  })
   return ok({ id: String(assignment._id) }, { status: 201 })
 }
 

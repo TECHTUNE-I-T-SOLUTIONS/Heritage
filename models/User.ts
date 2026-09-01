@@ -1,7 +1,7 @@
 import { Schema, model, models, type Model, type Types } from 'mongoose'
 
 export type Role = 'student' | 'parent' | 'educator' | 'admin'
-export type AccountStatus = 'active' | 'suspended' | 'deactivated' | 'pending'
+export type AccountStatus = 'active' | 'suspended' | 'deactivated' | 'pending' | 'pending_payment'
 
 export interface IUser {
   _id: Types.ObjectId
@@ -44,7 +44,7 @@ const UserSchema = new Schema<IUser>(
   {
     role: { type: String, enum: ['student', 'parent', 'educator', 'admin'], required: true, index: true },
     adminRole: { type: String, enum: ['super', 'admin', 'sub'] },
-    status: { type: String, enum: ['active', 'suspended', 'deactivated', 'pending'], default: 'active', index: true },
+    status: { type: String, enum: ['active', 'suspended', 'deactivated', 'pending', 'pending_payment'], default: 'active', index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: true },
     fullName: { type: String, required: true, trim: true },

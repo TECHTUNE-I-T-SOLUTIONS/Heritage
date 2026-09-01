@@ -45,6 +45,7 @@ const SubscriptionSchema = new Schema<ISubscription>(
 )
 
 export type PaymentStatus = 'succeeded' | 'pending' | 'failed' | 'refunded'
+export type PaymentType = 'subscription' | 'individual_child'
 
 export interface IPayment {
   _id: Types.ObjectId
@@ -53,6 +54,7 @@ export interface IPayment {
   amount: number
   currency: string
   status: PaymentStatus
+  paymentType?: PaymentType
   invoiceNumber?: string
   provider?: string
   providerPaymentId?: string
@@ -69,6 +71,7 @@ const PaymentSchema = new Schema<IPayment>(
     amount: { type: Number, required: true },
     currency: { type: String, default: 'CAD' },
     status: { type: String, enum: ['succeeded', 'pending', 'failed', 'refunded'], default: 'pending', index: true },
+    paymentType: { type: String, enum: ['subscription', 'individual_child'], default: 'subscription' },
     invoiceNumber: { type: String },
     provider: { type: String },
     providerPaymentId: { type: String },

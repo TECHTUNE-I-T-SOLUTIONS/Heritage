@@ -7,6 +7,7 @@ import { SiteContent } from '@/models/Content'
 import { hashPassword } from '@/lib/auth'
 import { initializeTransaction, paystackConfigured, paystackCurrency } from '@/lib/paystack'
 import { convertAmount, roundForCurrency } from '@/lib/fx'
+import { sendEmail } from '@/lib/mail'
 
 export async function GET() {
   const { session, response } = await requireAuth(['parent'])
@@ -35,6 +36,9 @@ const childSchema = z.object({
   email: z.string().min(3), // can be custom unique email/username
   password: z.string().min(8),
   age: z.coerce.number().int().min(3).max(19),
+  dateOfBirth: z.string().optional(),
+  timezone: z.string().optional(),
+  availability: z.array(z.string()).optional(),
 })
 
 export async function POST(request: Request) {
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
 
   await connectToDatabase()
 
-  const { fullName, preferredName, email, password, age } = parsed.data
+  const { fullName, preferredName, email, password, age, dateOfBirth, timezone, availability } = parsed.data
 
   // Clean email/username check
   const checkEmail = email.includes('@') ? email.toLowerCase() : `${email.toLowerCase()}@heritage.local`
@@ -82,6 +86,9 @@ export async function POST(request: Request) {
     fullName,
     preferredName,
     age,
+    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+    timezone,
+    availability,
     parent: session.userId,
     cohort: null,
   })
@@ -95,6 +102,7 @@ export async function POST(request: Request) {
     amount: childPrice,
     currency,
     status: 'pending',
+    paymentType: 'individual_child',
     provider: 'paystack',
     providerPaymentId: reference,
     metadata: {
@@ -113,6 +121,17 @@ export async function POST(request: Request) {
     child.status = 'active'
     await child.save()
 
+    // Send welcome email to child
+    await sendEmail({
+      to: checkEmail,
+      subject: 'Welcome to Heritage Club! 🎉',
+      type: 'child_welcome',
+      data: {
+        name: child.preferredName || child.fullName,
+        email: checkEmail,
+      },
+    })
+
     return ok({ simulated: true, childPrice })
   }
 
@@ -127,10 +146,11 @@ export async function POST(request: Request) {
       amount: chargeAmount,
       currency: chargeCurrency,
       reference,
-      callbackUrl: `${request.headers.get('origin') || 'http://localhost:3000'}/payment/callback`,
+      callbackUrl: `${request.headers.get('origin') || 'http://localhost:3000'}/payment/callback?type=child`,
       metadata: {
         paymentId: String(payment._id),
         studentId: String(child._id),
+        paymentType: 'individual_child',
       },
     })
     return ok({ authorizationUrl: init.data.authorization_url, reference, childPrice })

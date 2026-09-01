@@ -5,21 +5,27 @@ import { CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { useApi, apiPost } from '@/lib/client'
 import { PageHeading, Card, EmptyState, Skeleton, Badge } from '@/components/ui/kit'
 import { Modal, useToast } from '@/components/ui/interactive'
-import { Field, Input, Textarea } from '@/components/ui/form'
+import { Field, Input, Textarea, Select } from '@/components/ui/form'
 
 interface QuizRow { id: string; title: string; description: string | null; questionCount: number; xpReward: number; status: string; questions?: QBuilder[] }
 interface QBuilder { prompt: string; options: string[]; correctIndex: number; points: number }
+interface Pillar { id: string; title: string }
+interface Module { id: string; title: string; pillar: string }
 
 const emptyQ = (): QBuilder => ({ prompt: '', options: ['', ''], correctIndex: 0, points: 1 })
 
 export default function EducatorQuizzes() {
   const { data, loading, error, refetch } = useApi<QuizRow[]>('/api/educator/quizzes')
+  const pillars = useApi<Pillar[]>('/api/curriculum/pillars')
+  const modules = useApi<Module[]>('/api/curriculum/modules')
   const { push } = useToast()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [xpReward, setXpReward] = useState(100)
+  const [pillarId, setPillarId] = useState('')
+  const [moduleId, setModuleId] = useState('')
   const [questions, setQuestions] = useState<QBuilder[]>([emptyQ()])
 
   const [editing, setEditing] = useState<QuizRow | null>(null)
@@ -31,7 +37,7 @@ export default function EducatorQuizzes() {
   const [deleting, setDeleting] = useState<QuizRow | null>(null)
 
   function reset() {
-    setTitle(''); setDescription(''); setXpReward(100); setQuestions([emptyQ()])
+    setTitle(''); setDescription(''); setXpReward(100); setPillarId(''); setModuleId(''); setQuestions([emptyQ()])
   }
 
   async function create() {
@@ -39,7 +45,14 @@ export default function EducatorQuizzes() {
     if (questions.some((q) => !q.prompt.trim() || q.options.some((o) => !o.trim()))) return push('Complete every question and option.', 'error')
     setBusy(true)
     try {
-      await apiPost('/api/educator/quizzes', { title, description, xpReward: Number(xpReward), questions: questions.map((q) => ({ ...q, points: Number(q.points) })) })
+      await apiPost('/api/educator/quizzes', { 
+        title, 
+        description, 
+        xpReward: Number(xpReward), 
+        pillarId: pillarId || undefined,
+        moduleId: moduleId || undefined,
+        questions: questions.map((q) => ({ ...q, points: Number(q.points) })) 
+      })
       push('Quiz created.')
       setOpen(false); reset(); refetch()
     } catch (e) {
@@ -122,6 +135,24 @@ export default function EducatorQuizzes() {
         <div className="space-y-4">
           <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
           <Field label="Description"><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Pillar (Optional)">
+              <Select value={pillarId} onChange={(e) => { setPillarId(e.target.value); setModuleId('') }}>
+                <option value="">Select Pillar</option>
+                {pillars.data?.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Module (Optional)">
+              <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)} disabled={!pillarId}>
+                <option value="">Select Module</option>
+                {modules.data?.filter((m) => m.pillar === pillarId).map((m) => (
+                  <option key={m.id} value={m.id}>{m.title}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
           <Field label="XP reward"><Input type="number" value={xpReward} onChange={(e) => setXpReward(Number(e.target.value))} /></Field>
 
           <div className="space-y-4">

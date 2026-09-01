@@ -55,9 +55,14 @@ export async function POST(req: NextRequest) {
   if (payment.metadata && payment.metadata.studentId) {
     const { User } = await import('@/models/User')
     await User.updateOne({ _id: payment.metadata.studentId }, { status: 'active' })
+    
+    // For individual child payments, send a more specific notification
+    const child = await User.findById(payment.metadata.studentId).select('fullName preferredName').lean()
+    const childName = child ? (child.preferredName || child.fullName) : 'Child'
+    await notifyPaymentSuccess(session.userId, `${payment.currency} ${payment.amount} for ${childName}`)
+  } else {
+    await notifyPaymentSuccess(session.userId, `${payment.currency} ${payment.amount}`)
   }
-
-  await notifyPaymentSuccess(session.userId, `${payment.currency} ${payment.amount}`)
 
   return ok({ status: 'succeeded' })
 }

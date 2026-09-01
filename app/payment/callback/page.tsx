@@ -32,7 +32,18 @@ function CallbackInner() {
           try {
             const me = await fetch('/api/auth/me').then((r) => r.json())
             const role = me?.data?.role ?? 'parent'
-            setTimeout(() => router.push(`/dashboard/${role}`), 1400)
+            
+            // If this was a child payment, redirect to children page
+            const urlParams = new URLSearchParams(window.location.search)
+            const isChildPayment = urlParams.get('type') === 'child'
+            
+            setTimeout(() => {
+              if (isChildPayment && role === 'parent') {
+                router.push('/dashboard/parent/children')
+              } else {
+                router.push(`/dashboard/${role}`)
+              }
+            }, 1400)
           } catch {
             setTimeout(() => router.push('/login'), 1400)
           }

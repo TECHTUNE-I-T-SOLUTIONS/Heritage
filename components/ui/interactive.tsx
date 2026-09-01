@@ -13,7 +13,7 @@ export interface Column<T> {
   className?: string
 }
 
-export function DataTable<T extends Record<string, unknown>>({ columns, rows, empty }: { columns: Column<T>[]; rows: T[]; empty?: ReactNode }) {
+export function DataTable<T extends Record<string, unknown>>({ columns, rows, empty, onRowClick }: { columns: Column<T>[]; rows: T[]; empty?: ReactNode; onRowClick?: (row: T) => void }) {
   if (!rows.length && empty) return <>{empty}</>
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -28,7 +28,11 @@ export function DataTable<T extends Record<string, unknown>>({ columns, rows, em
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-t border-border">
+            <tr 
+              key={i} 
+              className="border-t border-border cursor-pointer hover:bg-secondary/50 transition" 
+              onClick={() => onRowClick?.(row)}
+            >
               {columns.map((c) => (
                 <td key={c.key} className={cn('px-5 py-4', c.className)}>{c.render ? c.render(row) : String(row[c.key] ?? '—')}</td>
               ))}
@@ -39,7 +43,11 @@ export function DataTable<T extends Record<string, unknown>>({ columns, rows, em
       {/* Mobile cards */}
       <div className="divide-y divide-border sm:hidden">
         {rows.map((row, i) => (
-          <div key={i} className="space-y-2 p-4">
+          <div 
+            key={i} 
+            className="space-y-2 p-4 cursor-pointer hover:bg-secondary/50 transition" 
+            onClick={() => onRowClick?.(row)}
+          >
             {columns.map((c) => (
               <div key={c.key} className="flex justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">{c.header}</span>

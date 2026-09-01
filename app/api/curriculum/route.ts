@@ -9,8 +9,8 @@ export async function GET() {
   await connectToDatabase()
   const [pillars, modules, lessons] = await Promise.all([
     Pillar.find().sort({ order: 1 }).lean(),
-    Module.find().sort({ order: 1 }).lean(),
-    Lesson.find().sort({ week: 1, order: 1 }).lean(),
+    Module.find().sort({ order: 1 }).select('unlockedByEducator').lean(),
+    Lesson.find().sort({ week: 1, order: 1 }).select('title customTitle week xpReward status meetingLink scheduledDate scheduledDay scheduledTime').lean(),
   ])
 
   return ok(
@@ -25,9 +25,21 @@ export async function GET() {
           id: String(m._id),
           title: m.title,
           status: m.status,
+          unlockedByEducator: m.unlockedByEducator,
           lessons: lessons
             .filter((l) => String(l.module) === String(m._id))
-            .map((l) => ({ id: String(l._id), title: l.title, week: l.week, xpReward: l.xpReward, status: l.status })),
+            .map((l) => ({
+              id: String(l._id),
+              title: l.title,
+              customTitle: l.customTitle,
+              week: l.week,
+              xpReward: l.xpReward,
+              status: l.status,
+              meetingLink: l.meetingLink,
+              scheduledDate: l.scheduledDate,
+              scheduledDay: l.scheduledDay,
+              scheduledTime: l.scheduledTime,
+            })),
         })),
     })),
   )

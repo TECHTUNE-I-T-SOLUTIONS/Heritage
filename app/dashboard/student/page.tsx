@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Trophy, Flame, CheckCircle2, BookOpen, ArrowRight, Video } from 'lucide-react'
+import { Trophy, Flame, CheckCircle2, BookOpen, ArrowRight, Video, Calendar, Clock, ExternalLink } from 'lucide-react'
 import { useApi } from '@/lib/client'
 import { PageHeading, Card, StatCard, ProgressBar, EmptyState, SkeletonCards, Badge } from '@/components/ui/kit'
 import { formatDate } from '@/lib/format'
@@ -16,6 +16,7 @@ interface Overview {
   quizzesAvailable: number
   quizzesTaken: number
   upcomingAssignments: { id: string; title: string; dueDate: string | null }[]
+  nextClass: { id: string; title: string; customTitle: string | null; week: number; scheduledDate: string | null; scheduledDay: string | null; scheduledTime: string | null; meetingLink: string | null } | null
 }
 
 export default function StudentDashboard() {
@@ -54,7 +55,44 @@ export default function StudentDashboard() {
                 <div>
                   <p className="font-medium">{data.cohort.name}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{data.cohort.code} · {data.cohort.schedule ?? 'Schedule TBC'}</p>
-                  {data.cohort.meetingLink && <a href={data.cohort.meetingLink} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground">Join session</a>}
+                  
+                  {data.nextClass ? (
+                    <div className="mt-4 rounded-lg bg-secondary p-3">
+                      <p className="text-sm font-medium">{data.nextClass.customTitle || data.nextClass.title}</p>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        {data.nextClass.scheduledDay && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{data.nextClass.scheduledDay}</span>
+                          </div>
+                        )}
+                        {data.nextClass.scheduledTime && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{data.nextClass.scheduledTime}</span>
+                          </div>
+                        )}
+                        {data.nextClass.scheduledDate && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{new Date(data.nextClass.scheduledDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                      {data.nextClass.meetingLink && (
+                        <a href={data.nextClass.meetingLink} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                          <ExternalLink className="h-3 w-3" />
+                          Join Meeting
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-muted-foreground">No upcoming class scheduled.</p>
+                  )}
+                  
+                  {data.cohort.meetingLink && !data.nextClass?.meetingLink && (
+                    <a href={data.cohort.meetingLink} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground">Join session</a>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">You'll be assigned to a cohort soon.</p>

@@ -43,7 +43,87 @@ export async function GET() {
   )
 
   const subscription = await Subscription.findOne({ account: parentId }).lean()
-  const payments = await Payment.find({ account: parentId }).sort({ createdAt: -1 }).limit(5).lean()
+  const payments = await Payment.find({ account: parentId }).sort({ createdAt: -1 }).limit(10).lean()
+  
+  // Get child details for individual child payments
+  const studentIds = payments
+    .map(p => p.metadata?.studentId)
+    .filter(Boolean)
+    .map(id => id.toString())
+  
+  const childrenForPayments = await User.find({ 
+    _id: { $in: studentIds },
+    parent: parentId 
+  }).select('fullName preferredName').lean()
+  
+  const childMap = new Map(childrenForPayments.map(c => [String(c._id), c]))
+
+  const enhancedPayments = payments.map(p => {
+    const studentId = p.metadata?.studentId?.toString()
+    const child = studentId ? childMap.get(studentId) : null
+    
+    return {
+      id: String(p._id),
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      invoiceNumber: p.invoiceNumber ?? null,
+      paidAt: p.paidAt ?? null,
+      createdAt: p.createdAt,
+      childName: child ? (child.preferredName || child.fullName) : null,
+      childId: studentId || null,
+      paymentType: p.paymentType || (p.subscription ? 'subscription' : 'individual_child'),
+      accountType: 'parent',
+    }
+  })
+
+  // Get child subscriptions and payments
+  const childIds = children.map(c => c._id)
+  const childSubscriptions = await Subscription.find({ account: { $in: childIds } })
+    .populate('account', 'fullName preferredName email')
+    .lean()
+  
+  const childPayments = await Payment.find({ account: { $in: childIds } })
+    .populate('account', 'fullName preferredName email')
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean()
+
+  const enhancedChildSubs = childSubscriptions.map(sub => {
+    const child = sub.account as any
+    return {
+      id: String(sub._id),
+      planKey: sub.planKey,
+      price: sub.price,
+      currency: sub.currency,
+      status: sub.status,
+      childrenCount: sub.childrenCount,
+      currentPeriodEnd: sub.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      accountType: 'child',
+      childName: child?.fullName || 'Unknown child',
+      childPreferredName: child?.preferredName || null,
+      childEmail: child?.email || null,
+    }
+  })
+
+  const enhancedChildPayments = childPayments.map(p => {
+    const child = p.account as any
+    return {
+      id: String(p._id),
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      invoiceNumber: p.invoiceNumber ?? null,
+      paidAt: p.paidAt ?? null,
+      createdAt: p.createdAt,
+      childName: child?.fullName || 'Unknown child',
+      childPreferredName: child?.preferredName || null,
+      childEmail: child?.email || null,
+      paymentType: p.paymentType || (p.subscription ? 'subscription' : 'individual_child'),
+      accountType: 'child',
+    }
+  })
 
   return ok({
     children: childCards,
@@ -58,6 +138,9 @@ export async function GET() {
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         }
       : null,
+    payments: enhancedPayments,
+    childSubscriptions: enhancedChildSubs,
+    childPayments: enhancedChildPayments,
     recentPayments: payments.map((p) => ({
       id: String(p._id),
       amount: p.amount,

@@ -34,6 +34,7 @@ export interface IModule {
   description?: string
   order: number
   status: PublishStatus
+  unlockedByEducator?: boolean // Whether educator has explicitly unlocked this module
   createdAt: Date
   updatedAt: Date
 }
@@ -45,6 +46,7 @@ const ModuleSchema = new Schema<IModule>(
     description: { type: String },
     order: { type: Number, default: 0 },
     status: { type: String, enum: ['draft', 'published', 'archived'], default: 'published' },
+    unlockedByEducator: { type: Boolean, default: false },
   },
   { timestamps: true },
 )
@@ -62,12 +64,18 @@ export interface ILesson {
   module: Types.ObjectId
   week: number
   title: string
+  customTitle?: string // Custom title for a specific scheduled class session
   summary?: string
   content?: string
   resources: ILessonResource[]
   xpReward: number
   order: number
   status: PublishStatus
+  meetingLink?: string // Google Meet or Zoom link for live class
+  recordingLink?: string // Video recording link after class concludes
+  scheduledDate?: Date // Date and time when the class is scheduled
+  scheduledDay?: 'Saturday' | 'Sunday' // Weekend day for the class
+  scheduledTime?: string // Time slot for the class
   createdAt: Date
   updatedAt: Date
 }
@@ -78,6 +86,7 @@ const LessonSchema = new Schema<ILesson>(
     module: { type: Schema.Types.ObjectId, ref: 'Module', required: true, index: true },
     week: { type: Number, default: 1 },
     title: { type: String, required: true, trim: true },
+    customTitle: { type: String, trim: true },
     summary: { type: String },
     content: { type: String },
     resources: [
@@ -91,6 +100,11 @@ const LessonSchema = new Schema<ILesson>(
     xpReward: { type: Number, default: 50 },
     order: { type: Number, default: 0 },
     status: { type: String, enum: ['draft', 'published', 'archived'], default: 'published' },
+    meetingLink: { type: String, trim: true },
+    recordingLink: { type: String, trim: true },
+    scheduledDate: { type: Date },
+    scheduledDay: { type: String, enum: ['Saturday', 'Sunday'] },
+    scheduledTime: { type: String, trim: true },
   },
   { timestamps: true },
 )

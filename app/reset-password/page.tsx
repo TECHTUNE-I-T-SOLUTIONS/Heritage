@@ -45,9 +45,13 @@ function ResetForm() {
       <Field label="Email address">
         <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
-      <Field label="Reset token">
-        <Input required value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your reset token" />
-      </Field>
+      {process.env.NODE_ENV !== 'production' ? (
+        <Field label="Reset token (Dev Mode)">
+          <Input required value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your reset token" />
+        </Field>
+      ) : (
+        <input type="hidden" value={token} />
+      )}
       <Field label="New password">
         <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
       </Field>

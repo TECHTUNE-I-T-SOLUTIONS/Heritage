@@ -199,12 +199,26 @@ function ForgotInner() {
     >
       {sent ? (
         <div className="mt-8 rounded-2xl border border-border bg-secondary/60 p-5 text-sm leading-6">
-          If an account exists for <strong>{email}</strong>, recovery instructions are on their way.
-          {devToken && (
-            <p className="mt-3 break-all text-xs text-muted-foreground">
-              Dev token: <code>{devToken}</code> —{' '}
-              <Link className="underline" href={`/staff/reset-password?portal=${portal}&email=${encodeURIComponent(email)}&token=${devToken}`}>reset now</Link>
-            </p>
+          <p className="font-medium mb-2">Check your email</p>
+          <p className="text-muted-foreground">
+            If an account exists for <strong>{email}</strong>, recovery instructions have been sent to your email address.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            The link will expire in 1 hour for your security.
+          </p>
+          {process.env.NODE_ENV !== 'production' && devToken && (
+            <div className="mt-4 p-3 bg-background rounded-lg border border-border">
+              <p className="text-xs font-semibold mb-1">Development Mode</p>
+              <p className="break-all text-xs text-muted-foreground mb-2">
+                Dev token: <code className="bg-secondary px-1 rounded">{devToken}</code>
+              </p>
+              <Link 
+                className="inline-block text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-full hover:opacity-90"
+                href={`/staff/reset-password?portal=${portal}&email=${encodeURIComponent(email)}&token=${devToken}`}
+              >
+                Reset Password (Dev)
+              </Link>
+            </div>
           )}
         </div>
       ) : (
@@ -264,7 +278,13 @@ function ResetInner() {
       ) : (
         <form className="mt-8 grid gap-4" onSubmit={submit}>
           <Field label="Email address"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-          <Field label="Reset token"><Input required value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your reset token" /></Field>
+          {process.env.NODE_ENV !== 'production' ? (
+            <Field label="Reset token (Dev Mode)">
+              <Input required value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your reset token" />
+            </Field>
+          ) : (
+            <input type="hidden" value={token} />
+          )}
           <Field label="New password"><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></Field>
           <Field label="Confirm password"><Input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} /></Field>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

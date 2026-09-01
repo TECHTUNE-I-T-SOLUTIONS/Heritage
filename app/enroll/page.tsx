@@ -13,6 +13,19 @@ import { COUNTRIES, TIMEZONES, AVAILABILITY_OPTIONS } from '@/lib/options'
 type Child = { fullName: string; age: string; dateOfBirth: string; preferredName: string; timezone: string; availability: string }
 const emptyChild = (): Child => ({ fullName: '', age: '', dateOfBirth: '', preferredName: '', timezone: '', availability: '' })
 
+// Calculate min and max date for date of birth (3-19 years old)
+const getMinDateOfBirth = () => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 19)
+  return date.toISOString().split('T')[0]
+}
+
+const getMaxDateOfBirth = () => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 3)
+  return date.toISOString().split('T')[0]
+}
+
 function planForChildren(n: number) {
   if (n >= 4) return 'family4'
   if (n === 3) return 'family3'
@@ -54,6 +67,72 @@ export default function EnrollPage() {
   const [children, setChildren] = useState<Child[]>([emptyChild()])
   const [student, setStudent] = useState({ fullName: '', email: '', password: '', dateOfBirth: '', age: '', preferredName: '', country: '', timezone: '', availability: '' })
 
+  // Handle age change for child - auto-set date of birth year
+  const handleChildAgeChange = (index: number, age: string) => {
+    const updatedChildren = children.map((c, i) => {
+      if (i === index) {
+        if (age) {
+          const ageNum = Number(age)
+          const currentYear = new Date().getFullYear()
+          const birthYear = currentYear - ageNum
+          return { ...c, age, dateOfBirth: `${birthYear}-01-01` }
+        }
+        return { ...c, age }
+      }
+      return c
+    })
+    setChildren(updatedChildren)
+  }
+
+  // Handle date of birth change for child - auto-calculate age
+  const handleChildDateOfBirthChange = (index: number, dateOfBirth: string) => {
+    const updatedChildren = children.map((c, i) => {
+      if (i === index) {
+        if (dateOfBirth) {
+          const birthDate = new Date(dateOfBirth)
+          const today = new Date()
+          let age = today.getFullYear() - birthDate.getFullYear()
+          const monthDiff = today.getMonth() - birthDate.getMonth()
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+          }
+          return { ...c, dateOfBirth, age: String(age) }
+        }
+        return { ...c, dateOfBirth }
+      }
+      return c
+    })
+    setChildren(updatedChildren)
+  }
+
+  // Handle age change for student - auto-set date of birth year
+  const handleStudentAgeChange = (age: string) => {
+    if (age) {
+      const ageNum = Number(age)
+      const currentYear = new Date().getFullYear()
+      const birthYear = currentYear - ageNum
+      setStudent({ ...student, age, dateOfBirth: `${birthYear}-01-01` })
+    } else {
+      setStudent({ ...student, age })
+    }
+  }
+
+  // Handle date of birth change for student - auto-calculate age
+  const handleStudentDateOfBirthChange = (dateOfBirth: string) => {
+    if (dateOfBirth) {
+      const birthDate = new Date(dateOfBirth)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      setStudent({ ...student, dateOfBirth, age: String(age) })
+    } else {
+      setStudent({ ...student, dateOfBirth })
+    }
+  }
+
   const [dbPlans, setDbPlans] = useState<any[]>([])
 
 
@@ -83,25 +162,63 @@ export default function EnrollPage() {
   function validate(): string | null {
     if (flow === 'parent') {
       if (step === 0) {
-        if (!parent.fullName || !parent.email || parent.password.length < 8 || !parent.country || !parent.timezone)
-          return 'Please complete all required fields. Password must be at least 8 characters.'
+        const errors = []
+        if (!parent.fullName) errors.push('Full name is required')
+        if (!parent.email) errors.push('Email is required')
+        if (!parent.password) errors.push('Password is required')
+        else if (parent.password.length < 8) errors.push('Password must be at least 8 characters')
+        if (!parent.country) errors.push('Country is required')
+        if (!parent.timezone) errors.push('Time zone is required')
+        if (errors.length > 0) return errors.join('. ')
       }
       if (step === 1) {
         for (const c of children) {
-          if (!c.fullName || !c.age) return 'Each child needs at least a full name and age.'
-          const a = Number(c.age)
-          if (a < 3 || a > 19) return 'Child age must be between 3 and 19.'
+          const errors = []
+          if (!c.fullName) errors.push('Child full name is required')
+          if (!c.dateOfBirth) errors.push('Child date of birth is required')
+          else {
+            // Validate age based on date of birth
+            const birthDate = new Date(c.dateOfBirth)
+            const today = new Date()
+            let age = today.getFullYear() - birthDate.getFullYear()
+            const monthDiff = today.getMonth() - birthDate.getMonth()
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+              age--
+            }
+            if (age < 3 || age > 19) errors.push('Child age must be between 3 and 19 years old based on date of birth')
+          }
+          if (!c.timezone) errors.push('Child time zone is required')
+          if (!c.availability) errors.push('Child preferred class time is required')
+          if (errors.length > 0) return errors.join('. ')
         }
       }
     } else {
       if (step === 0) {
-        if (!student.fullName || !student.email || student.password.length < 8)
-          return 'Please complete all required fields. Password must be at least 8 characters.'
+        const errors = []
+        if (!student.fullName) errors.push('Full name is required')
+        if (!student.email) errors.push('Email is required')
+        if (!student.password) errors.push('Password is required')
+        else if (student.password.length < 8) errors.push('Password must be at least 8 characters')
+        if (errors.length > 0) return errors.join('. ')
       }
       if (step === 1) {
-        const a = Number(student.age)
-        if (!student.age || a < 3 || a > 19) return 'Please enter an age between 3 and 19.'
-        if (!student.country || !student.timezone) return 'Please select your country and time zone.'
+        const errors = []
+        if (!student.dateOfBirth) errors.push('Date of birth is required')
+        else {
+          // Validate age based on date of birth
+          const birthDate = new Date(student.dateOfBirth)
+          const today = new Date()
+          let age = today.getFullYear() - birthDate.getFullYear()
+          const monthDiff = today.getMonth() - birthDate.getMonth()
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+          }
+          if (age < 3 || age > 19) errors.push('Age must be between 3 and 19 years old based on date of birth')
+        }
+        if (!student.country) errors.push('Country is required')
+        if (!student.timezone) errors.push('Time zone is required')
+        if (!student.availability) errors.push('Preferred class time is required')
+        if (errors.length > 0) return errors.join('. ')
       }
     }
     return null
@@ -236,17 +353,19 @@ export default function EnrollPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Full name"><Input required value={child.fullName} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, fullName: e.target.value } : c)))} /></Field>
                   <Field label="Preferred name"><Input value={child.preferredName} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, preferredName: e.target.value } : c)))} /></Field>
-                  <Field label="Age"><Input type="number" min={3} max={19} required value={child.age} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, age: e.target.value } : c)))} /></Field>
-                  <Field label="Date of birth"><Input type="date" value={child.dateOfBirth} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, dateOfBirth: e.target.value } : c)))} /></Field>
+                  <Field label="Age">
+                    <Input type="number" min={3} max={19} required value={child.age} onChange={(e) => handleChildAgeChange(i, e.target.value)} />
+                  </Field>
+                  <Field label="Date of birth"><Input type="date" min={getMinDateOfBirth()} max={getMaxDateOfBirth()} value={child.dateOfBirth} onChange={(e) => handleChildDateOfBirthChange(i, e.target.value)} /></Field>
                   <Field label="Time zone">
-                    <Select value={child.timezone} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, timezone: e.target.value } : c)))}>
-                      <option value="">Same as parent</option>
+                    <Select required value={child.timezone} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, timezone: e.target.value } : c)))}>
+                      <option value="" disabled>Select time zone</option>
                       {TIMEZONES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </Select>
                   </Field>
                   <Field label="Preferred class time">
-                    <Select value={child.availability} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, availability: e.target.value } : c)))}>
-                      <option value="">No preference</option>
+                    <Select required value={child.availability} onChange={(e) => setChildren(children.map((c, x) => (x === i ? { ...c, availability: e.target.value } : c)))}>
+                      <option value="" disabled>Select preferred class time</option>
                       {AVAILABILITY_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
                     </Select>
                   </Field>
@@ -272,8 +391,10 @@ export default function EnrollPage() {
         {/* ---- STUDENT: Learner details ---- */}
         {flow === 'student' && step === 1 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Age"><Input type="number" min={3} max={19} required value={student.age} onChange={(e) => setStudent({ ...student, age: e.target.value })} /></Field>
-            <Field label="Date of birth"><Input type="date" value={student.dateOfBirth} onChange={(e) => setStudent({ ...student, dateOfBirth: e.target.value })} /></Field>
+            <Field label="Age">
+              <Input type="number" min={3} max={19} required value={student.age} onChange={(e) => handleStudentAgeChange(e.target.value)} />
+            </Field>
+            <Field label="Date of birth"><Input type="date" min={getMinDateOfBirth()} max={getMaxDateOfBirth()} value={student.dateOfBirth} onChange={(e) => handleStudentDateOfBirthChange(e.target.value)} /></Field>
             <Field label="Country">
               <Select required value={student.country} onChange={(e) => setStudent({ ...student, country: e.target.value })}>
                 <option value="" disabled>Select country</option>
@@ -288,8 +409,8 @@ export default function EnrollPage() {
             </Field>
             <div className="sm:col-span-2">
               <Field label="Preferred class time">
-                <Select value={student.availability} onChange={(e) => setStudent({ ...student, availability: e.target.value })}>
-                  <option value="">No preference</option>
+                <Select required value={student.availability} onChange={(e) => setStudent({ ...student, availability: e.target.value })}>
+                  <option value="" disabled>Select preferred class time</option>
                   {AVAILABILITY_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
                 </Select>
               </Field>
@@ -338,7 +459,11 @@ export default function EnrollPage() {
         )}
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+          <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+        </div>
+      )}
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <button type="button" onClick={prevStep} className={ghostBtn}>
