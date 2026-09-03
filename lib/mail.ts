@@ -9,6 +9,9 @@ interface MailData {
   amount?: string
   invoiceNumber?: string
   date?: string
+  time?: string
+  canadaTime?: string
+  timezone?: string
   meetingLink?: string
   className?: string
   cohortName?: string
@@ -19,12 +22,14 @@ interface MailData {
   email?: string
   resetToken?: string
   portal?: string
+  week?: number
+  session?: string
 }
 
 interface MailOptions {
   to: string | string[]
   subject: string
-  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist' | 'cohort_assignment' | 'admin_invite' | 'password_reset' | 'child_welcome'
+  type: 'welcome' | 'newsletter' | 'notification' | 'class_schedule' | 'reminder' | 'payment' | 'marketing' | 'waitlist' | 'cohort_assignment' | 'admin_invite' | 'password_reset' | 'child_welcome' | 'educator_invite' | 'class_scheduled'
   data: MailData
   body?: string
   fromAlias?: 'support' | 'finance' | 'admin' | 'hello' | 'no-reply'
@@ -65,6 +70,26 @@ export async function sendEmail({ to, subject, type, data, fromAlias = 'no-reply
   const fromEmail = ZOHO_EMAILS[fromAlias] || 'no-reply@damzynextgen.app'
   const html = getHtmlTemplate(type, data)
 
+  // Determine email category for proper classification
+  const getCategory = () => {
+    switch (type) {
+      case 'payment':
+      case 'admin_invite':
+      case 'educator_invite':
+      case 'password_reset':
+        return 'important'
+      case 'marketing':
+      case 'newsletter':
+        return 'promotions'
+      case 'welcome':
+      case 'child_welcome':
+      case 'cohort_assignment':
+        return 'updates'
+      default:
+        return 'primary'
+    }
+  }
+
   try {
     await transporter.sendMail({
       from: `"Heritage Club" <${fromEmail}>`,
@@ -72,6 +97,19 @@ export async function sendEmail({ to, subject, type, data, fromAlias = 'no-reply
       subject,
       html,
       attachments,
+      // Add headers for better deliverability
+      headers: {
+        'X-Priority': type === 'payment' || type === 'password_reset' ? '1' : '3',
+        'X-MSMail-Priority': type === 'payment' || type === 'password_reset' ? 'High' : 'Normal',
+        'X-Mailer': 'Heritage Club Mailer',
+        'List-ID': 'Heritage Club <heritage-club.damzynextgen.app>',
+        'Precedence': 'bulk',
+        'X-Google-App': 'Heritage Club',
+        // Gmail-specific headers
+        'X-Google-Smtp-Source': process.env.GOOGLE_SMTP_SOURCE || '',
+      },
+      // Add priority and category options
+      priority: type === 'payment' || type === 'password_reset' ? 'high' : 'normal',
     })
     console.log(`[SMTP Mailer Success] Sent to ${to} for type ${type}`)
   } catch (err) {
@@ -289,7 +327,9 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
         <div style="background-color: #f7fafc; border-left: 4px solid #2b6cb0; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
           <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Class Title:</strong> ${data.classTitle || 'Live Class Session'}</p>
           <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Date:</strong> ${data.date || 'TBD'}</p>
-          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Time:</strong> ${data.time || 'TBD'}</p>
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Time (Nigeria):</strong> ${data.time || 'TBD'}</p>
+          ${data.canadaTime ? `<p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Time (Canada):</strong> ${data.canadaTime}</p>` : ''}
+          <p style="margin: 0 0 8px 0; color: #2d3748;"><strong>Session:</strong> ${data.session || 'N/A'}</p>
           <p style="margin: 0; color: #2d3748;"><strong>Week:</strong> ${data.week || 'N/A'}</p>
         </div>
         ${data.meetingLink ? `
@@ -304,7 +344,65 @@ function getHtmlTemplate(type: MailOptions['type'], data: MailData): string {
         </table>
         ` : ''}
         <p style="color: #718096; font-size: 14px; line-height: 20px;">
-          Make sure to join a few minutes early to test your connection. If you have any issues, contact your educator or support at <a href="mailto:support@damzynextgen.app" style="color: #2b6cb0;">support@damzynextgen.app</a>.
+          Make sure to join a few minutes early to test your connection. The time shown above will be automatically converted to your local timezone when you view the class in your dashboard. If you have any issues, contact your educator or support at <a href="mailto:support@damzynextgen.app" style="color: #2b6cb0;">support@damzynextgen.app</a>.
+        </p>
+      `
+      break
+
+    case 'educator_invite':
+      contentHtml = `
+        <h1 style="color: #1a1a1a; font-size: 28px; margin-bottom: 16px; font-family: 'Playfair Display', Georgia, serif;">You're Invited to Teach at Heritage Club! 🎓</h1>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
+          Hello ${data.name || 'there'},<br><br>
+          ${data.invitedBy ? `<strong>${data.invitedBy}</strong> has` : 'We have'} invited you to join Heritage Club as an Educator. We're building a modern learning community to help young people connect with their culture, and we'd love your expertise in making this happen.
+        </p>
+        
+        <div style="background-color: #f7fafc; border-left: 4px solid #2b6cb0; padding: 20px; margin-bottom: 24px; border-radius: 4px;">
+          <h2 style="color: #2d3748; font-size: 18px; margin: 0 0 12px 0;">About Heritage Club</h2>
+          <p style="color: #4a5568; font-size: 14px; line-height: 20px; margin: 0 0 12px 0;">
+            Heritage Club is a cultural learning platform helping students aged 8-16 connect with their heritage through:
+          </p>
+          <ul style="color: #4a5568; font-size: 14px; line-height: 20px; margin: 0 0 12px 0; padding-left: 20px;">
+            <li>Live weekend classes (Saturday & Sunday)</li>
+            <li>Interactive curriculum across 4 pillars: Identity, Language, History, and Community</li>
+            <li>Gamified learning with XP, streaks, and leaderboards</li>
+            <li>Engaging quizzes, assignments, and projects</li>
+          </ul>
+        </div>
+
+        <div style="background-color: #ebf8ff; border: 2px solid #2b6cb0; padding: 20px; margin-bottom: 24px; border-radius: 8px; text-align: center;">
+          <p style="color: #2d3748; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">Your Invite Code</p>
+          <p style="color: #2b6cb0; font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 0;">${data.code}</p>
+          <p style="color: #718096; font-size: 12px; margin: 12px 0 0 0;">This code expires in 7 days</p>
+        </div>
+
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+          <tr>
+            <td align="center" style="border-radius: 8px; background-color: #2b6cb0;">
+              <a href="${websiteUrl}/educator/signup?code=${data.code}&email=${encodeURIComponent(data.email)}" target="_blank" style="font-size: 16px; font-family: sans-serif; font-weight: bold; color: #ffffff; text-decoration: none; padding: 14px 32px; border: 1px solid #2b6cb0; border-radius: 8px; display: inline-block;">
+                Create Your Educator Account
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <div style="background-color: #fffaf0; border-left: 4px solid #ed8936; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <h3 style="color: #2d3748; font-size: 16px; margin: 0 0 8px 0;">What You'll Do as an Educator:</h3>
+          <ul style="color: #4a5568; font-size: 14px; line-height: 20px; margin: 0; padding-left: 20px;">
+            <li>Create and schedule live class sessions</li>
+            <li>Add Zoom/Google Meet links for classes</li>
+            <li>Mark student attendance and award XP</li>
+            <li>Create and grade quizzes and assignments</li>
+            <li>Track student progress and engagement</li>
+            <li>Access educator analytics and insights</li>
+          </ul>
+        </div>
+
+        <p style="color: #718096; font-size: 14px; line-height: 20px; margin-bottom: 16px;">
+          If you have any questions about the role or need assistance with signup, please don't hesitate to reach out to us at <a href="mailto:support@damzynextgen.app" style="color: #2b6cb0;">support@damzynextgen.app</a>.
+        </p>
+        <p style="color: #718096; font-size: 13px; line-height: 18px; margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          This invitation was sent to ${data.email}. If you didn't expect this invitation, you can safely ignore this email.
         </p>
       `
       break

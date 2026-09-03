@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ToastProvider } from '@/components/ui/interactive'
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister'
 
 const themeScript = `try{var t=localStorage.getItem('hc-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}`
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased" suppressHydrationWarning>
         <ToastProvider>{children}</ToastProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <ServiceWorkerRegister />
       </body>
     </html>
   )

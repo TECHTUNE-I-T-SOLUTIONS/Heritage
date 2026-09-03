@@ -10,8 +10,11 @@ const scheduleSchema = z.object({
   lessonId: z.string(),
   customTitle: z.string().optional(),
   meetingLink: z.string().optional(),
+  recordingLink: z.string().optional(),
   scheduledDate: z.string().optional(),
   scheduledTime: z.string().optional(),
+  session: z.enum(['1', '2']).optional(),
+  ended: z.boolean().optional(),
   notifyStudents: z.boolean().optional().default(false),
 })
 
@@ -23,7 +26,7 @@ export async function POST(request: Request) {
   const parsed = scheduleSchema.safeParse(body)
   if (!parsed.success) return fail('Invalid parameters', 422)
 
-  const { lessonId, customTitle, meetingLink, scheduledDate, scheduledTime, notifyStudents } = parsed.data
+  const { lessonId, customTitle, meetingLink, recordingLink, scheduledDate, scheduledTime, session: sessionNum, ended, notifyStudents } = parsed.data
   await connectToDatabase()
 
   const lesson = await Lesson.findById(lessonId)
@@ -33,14 +36,33 @@ export async function POST(request: Request) {
   const updateData: any = {}
   if (customTitle !== undefined) updateData.customTitle = customTitle
   if (meetingLink !== undefined) updateData.meetingLink = meetingLink
+  if (recordingLink !== undefined) updateData.recordingLink = recordingLink
   if (scheduledDate !== undefined) {
     updateData.scheduledDate = new Date(scheduledDate)
-    // Set scheduledDay based on the date
-    const date = new Date(scheduledDate)
-    const day = date.getDay()
+    // Set scheduledDay based on the session (1 = Saturday, 2 = Sunday)
+    const day = sessionNum === '2' ? 0 : 6 // 0 = Sunday, 6 = Saturday
     updateData.scheduledDay = day === 0 ? 'Sunday' : 'Saturday'
+    
+    // If rescheduling to a future date, automatically unmark as ended
+    const newDate = new Date(scheduledDate)
+    const now = new Date()
+    if (newDate > now) {
+      updateData.ended = false
+      updateData.endedAt = undefined
+    }
   }
   if (scheduledTime !== undefined) updateData.scheduledTime = scheduledTime
+  
+  // Handle ended field - only if explicitly provided
+  // This allows educators to manually mark as ended or unmark as ended
+  if (ended !== undefined) {
+    updateData.ended = ended
+    if (ended) {
+      updateData.endedAt = new Date()
+    } else {
+      updateData.endedAt = undefined
+    }
+  }
 
   await Lesson.findByIdAndUpdate(lessonId, { $set: updateData })
 

@@ -7,6 +7,7 @@ import { ok, fail } from '@/lib/api'
 import { notifyWelcome } from '@/lib/notifications'
 
 import { AdminInvite } from '@/models/AdminInvite'
+import { EducatorInvite } from '@/models/EducatorInvite'
 
 const schema = z.object({
   flow: z.enum(['educator', 'admin']),
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest) {
     if (invite.expiresAt < new Date()) return fail('This invite code has expired.', 403)
     
     adminRole = invite.role
+    
+    // Mark invite as used
+    invite.used = true
+    await invite.save()
+  } else if (data.flow === 'educator') {
+    const invite = await EducatorInvite.findOne({ code: data.code, email: data.email.toLowerCase() })
+    if (!invite) return fail('Invalid educator invite code or email.', 403)
+    if (invite.used) return fail('This educator invite code has already been used.', 403)
+    if (invite.expiresAt < new Date()) return fail('This educator invite code has expired.', 403)
     
     // Mark invite as used
     invite.used = true

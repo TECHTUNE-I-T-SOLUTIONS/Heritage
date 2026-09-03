@@ -41,6 +41,7 @@ const roleLinks: Record<ShellRole, NavItem[]> = {
   educator: [
     ['/dashboard/educator', 'Overview', LayoutDashboard],
     ['/dashboard/educator/students', 'Students', Users],
+    ['/dashboard/educator/attendance', 'Attendance', CalendarDays],
     ['/dashboard/educator/lessons', 'Lessons', BookOpen],
     ['/dashboard/educator/quizzes', 'Quizzes', CheckCircle2],
     ['/dashboard/educator/assignments', 'Assignments', FileText],

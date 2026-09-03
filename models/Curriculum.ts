@@ -63,6 +63,7 @@ export interface ILesson {
   pillar: Types.ObjectId
   module: Types.ObjectId
   week: number
+  session: number // 1 = Saturday (main teaching), 2 = Sunday (quiz/assignment)
   title: string
   customTitle?: string // Custom title for a specific scheduled class session
   summary?: string
@@ -76,6 +77,8 @@ export interface ILesson {
   scheduledDate?: Date // Date and time when the class is scheduled
   scheduledDay?: 'Saturday' | 'Sunday' // Weekend day for the class
   scheduledTime?: string // Time slot for the class
+  ended?: boolean // Whether the class has ended (date passed)
+  endedAt?: Date // When the class was marked as ended
   createdAt: Date
   updatedAt: Date
 }
@@ -85,6 +88,7 @@ const LessonSchema = new Schema<ILesson>(
     pillar: { type: Schema.Types.ObjectId, ref: 'Pillar', required: true, index: true },
     module: { type: Schema.Types.ObjectId, ref: 'Module', required: true, index: true },
     week: { type: Number, default: 1 },
+    session: { type: Number, default: 1, min: 1, max: 2 },
     title: { type: String, required: true, trim: true },
     customTitle: { type: String, trim: true },
     summary: { type: String },
@@ -105,6 +109,8 @@ const LessonSchema = new Schema<ILesson>(
     scheduledDate: { type: Date },
     scheduledDay: { type: String, enum: ['Saturday', 'Sunday'] },
     scheduledTime: { type: String, trim: true },
+    ended: { type: Boolean, default: false },
+    endedAt: { type: Date },
   },
   { timestamps: true },
 )

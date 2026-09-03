@@ -132,10 +132,10 @@ export default function EducatorQuizzes() {
           <button onClick={create} disabled={busy} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground disabled:opacity-60">{busy ? 'Creating…' : 'Create quiz'}</button>
         </>
       }>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
           <Field label="Description"><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Pillar (Optional)">
               <Select value={pillarId} onChange={(e) => { setPillarId(e.target.value); setModuleId('') }}>
                 <option value="">Select Pillar</option>
@@ -158,14 +158,17 @@ export default function EducatorQuizzes() {
           <div className="space-y-4">
             {questions.map((q, i) => (
               <div key={i} className="rounded-2xl border border-border p-4">
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-sm font-medium">Question {i + 1}</p>
-                  {questions.length > 1 && <button onClick={() => setQuestions(questions.filter((_, x) => x !== i))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={q.points} onChange={(e) => setQ(i, { points: Number(e.target.value) })} className="w-16 text-xs" />
+                    {questions.length > 1 && <button onClick={() => setQuestions(questions.filter((_, x) => x !== i))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}
+                  </div>
                 </div>
-                <Field label="Prompt"><Input value={q.prompt} onChange={(e) => setQ(i, { prompt: e.target.value })} /></Field>
+                <Field label="Prompt"><Textarea value={q.prompt} onChange={(e) => setQ(i, { prompt: e.target.value })} placeholder="Enter your question here..." /></Field>
                 <div className="mt-3 space-y-2">
                   {q.options.map((opt, oi) => (
-                    <div key={oi} className="flex items-center gap-2">
+                    <div key={oi} className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <input type="radio" name={`correct-${i}`} checked={q.correctIndex === oi} onChange={() => setQ(i, { correctIndex: oi })} aria-label="Correct answer" />
                       <Input value={opt} onChange={(e) => setQ(i, { options: q.options.map((o, x) => (x === oi ? e.target.value : o)) })} placeholder={`Option ${oi + 1}`} />
                       {q.options.length > 2 && <button onClick={() => setQ(i, { options: q.options.filter((_, x) => x !== oi), correctIndex: 0 })} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}
@@ -186,7 +189,7 @@ export default function EducatorQuizzes() {
           <button onClick={edit} disabled={busy} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground disabled:opacity-60">{busy ? 'Saving…' : 'Save changes'}</button>
         </>
       }>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <Field label="Title"><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></Field>
           <Field label="Description"><Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} /></Field>
           <Field label="XP reward"><Input type="number" value={editXpReward} onChange={(e) => setEditXpReward(Number(e.target.value))} /></Field>
@@ -194,14 +197,17 @@ export default function EducatorQuizzes() {
           <div className="space-y-4">
             {editQuestions.map((q, i) => (
               <div key={i} className="rounded-2xl border border-border p-4">
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-sm font-medium">Question {i + 1}</p>
-                  {editQuestions.length > 1 && <button onClick={() => setEditQuestions(editQuestions.filter((_, x) => x !== i))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={q.points} onChange={(e) => setEditQ(i, { points: Number(e.target.value) })} className="w-16 text-xs" />
+                    {editQuestions.length > 1 && <button onClick={() => setEditQuestions(editQuestions.filter((_, x) => x !== i))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}
+                  </div>
                 </div>
-                <Field label="Prompt"><Input value={q.prompt} onChange={(e) => setEditQ(i, { prompt: e.target.value })} /></Field>
+                <Field label="Prompt"><Textarea value={q.prompt} onChange={(e) => setEditQ(i, { prompt: e.target.value })} /></Field>
                 <div className="mt-3 space-y-2">
                   {q.options.map((opt, oi) => (
-                    <div key={oi} className="flex items-center gap-2">
+                    <div key={oi} className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <input type="radio" name={`edit-correct-${i}`} checked={q.correctIndex === oi} onChange={() => setEditQ(i, { correctIndex: oi })} aria-label="Correct answer" />
                       <Input value={opt} onChange={(e) => setEditQ(i, { options: q.options.map((o, x) => (x === oi ? e.target.value : o)) })} placeholder={`Option ${oi + 1}`} />
                       {q.options.length > 2 && <button onClick={() => setEditQ(i, { options: q.options.filter((_, x) => x !== oi), correctIndex: 0 })} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>}

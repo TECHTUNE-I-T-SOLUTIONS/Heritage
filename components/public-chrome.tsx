@@ -36,7 +36,6 @@ export function PublicFooter() {
         <div>
           <Logo />
           <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">A modern cultural learning experience helping the next generation connect with their African heritage.</p>
-          <p className="mt-4 text-xs text-muted-foreground">A Damzy Next Gen experience.</p>
         </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           <div>

@@ -7,10 +7,13 @@ export async function GET() {
   if (response) return response
 
   await connectToDatabase()
+
+  // NOTE: Removed automatic marking of ended lessons - educators now manually mark classes as ended
+
   const [pillars, modules, lessons] = await Promise.all([
     Pillar.find().sort({ order: 1 }).lean(),
-    Module.find().sort({ order: 1 }).select('unlockedByEducator').lean(),
-    Lesson.find().sort({ week: 1, order: 1 }).select('title customTitle week xpReward status meetingLink scheduledDate scheduledDay scheduledTime').lean(),
+    Module.find().sort({ order: 1 }).select('pillar title status unlockedByEducator').lean(),
+    Lesson.find().sort({ week: 1, session: 1, order: 1 }).select('pillar module title customTitle week session xpReward status meetingLink recordingLink scheduledDate scheduledDay scheduledTime ended').lean(),
   ])
 
   return ok(
@@ -30,15 +33,20 @@ export async function GET() {
             .filter((l) => String(l.module) === String(m._id))
             .map((l) => ({
               id: String(l._id),
+              pillar: String(l.pillar),
+              module: String(l.module),
               title: l.title,
               customTitle: l.customTitle,
               week: l.week,
+              session: l.session,
               xpReward: l.xpReward,
               status: l.status,
               meetingLink: l.meetingLink,
+              recordingLink: l.recordingLink,
               scheduledDate: l.scheduledDate,
               scheduledDay: l.scheduledDay,
               scheduledTime: l.scheduledTime,
+              ended: l.ended || false,
             })),
         })),
     })),

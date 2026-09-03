@@ -7,6 +7,13 @@ import { User } from '@/models/User'
 import { Lesson } from '@/models/Curriculum'
 import { awardXp } from '@/lib/xp'
 import { sendEmail } from '@/lib/mail'
+import { nigeriaToCanada, getCanadaTimezone } from '@/lib/timezone'
+
+const putSchema = z.object({
+  attendanceId: z.string(),
+  status: z.enum(['present', 'absent', 'late', 'excused']),
+  note: z.string().optional(),
+})
 
 export async function GET(request: Request) {
   const { session, response } = await requireAuth(['educator'])
@@ -14,15 +21,27 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const cohortId = searchParams.get('cohortId')
-  if (!cohortId) return fail('Cohort ID required', 400)
 
   await connectToDatabase()
 
-  // Verify educator owns cohort
-  const cohort = await Cohort.findOne({ _id: cohortId, educator: session.userId }).lean()
-  if (!cohort) return fail('Cohort not found or unauthorized', 403)
+  // If cohortId is provided, verify educator owns it and filter by it
+  if (cohortId) {
+    const cohort = await Cohort.findOne({ _id: cohortId, educator: session.userId }).lean()
+    if (!cohort) return fail('Cohort not found or unauthorized', 403)
 
-  const attendance = await Attendance.find({ cohort: cohortId })
+    const attendance = await Attendance.find({ cohort: cohortId })
+      .populate('student', 'fullName preferredName')
+      .sort({ sessionDate: -1 })
+      .lean()
+
+    return ok(attendance)
+  }
+
+  // If no cohortId, get all cohorts owned by this educator and return attendance for all
+  const educatorCohorts = await Cohort.find({ educator: session.userId }).select('_id').lean()
+  const cohortIds = educatorCohorts.map(c => c._id)
+
+  const attendance = await Attendance.find({ cohort: { $in: cohortIds } })
     .populate('student', 'fullName preferredName')
     .sort({ sessionDate: -1 })
     .lean()
@@ -33,6 +52,7 @@ export async function GET(request: Request) {
 const postSchema = z.object({
   cohortId: z.string(),
   sessionDate: z.string(),
+  sessionTime: z.string().optional(), // Nigeria time (WAT)
   week: z.number().min(1).max(16),
   session: z.number().min(1).max(2),
   pillarId: z.string().optional(),
@@ -58,7 +78,7 @@ export async function POST(request: Request) {
   const parsed = postSchema.safeParse(body)
   if (!parsed.success) return fail('Invalid parameters', 422)
 
-  const { cohortId, sessionDate, week, session: sessionNum, pillarId, moduleId, customTitle, meetingLink, recordingLink, notifyStudents, records } = parsed.data
+  const { cohortId, sessionDate, sessionTime, week, session: sessionNum, pillarId, moduleId, customTitle, meetingLink, recordingLink, notifyStudents, records } = parsed.data
   await connectToDatabase()
 
   // Verify educator owns cohort
@@ -66,6 +86,29 @@ export async function POST(request: Request) {
   if (!cohort) return fail('Cohort not found or unauthorized', 403)
 
   const date = new Date(sessionDate)
+  
+  // Convert Nigeria time to Canada time for display
+  let displayTime = sessionTime
+  let canadaTime = ''
+  let timezone = 'WAT'
+  if (sessionTime) {
+    try {
+      const nigeriaDate = new Date()
+      const [hours, minutes] = sessionTime.split(':').map(Number)
+      nigeriaDate.setHours(hours, minutes, 0, 0)
+      
+      const canadaDate = nigeriaToCanada(nigeriaDate)
+      const canadaHours = canadaDate.getHours().toString().padStart(2, '0')
+      const canadaMinutes = canadaDate.getMinutes().toString().padStart(2, '0')
+      timezone = getCanadaTimezone(canadaDate)
+      canadaTime = `${canadaHours}:${canadaMinutes} ${timezone}`
+      displayTime = `${sessionTime} WAT`
+    } catch (error) {
+      console.error('Error converting timezone:', error)
+      displayTime = sessionTime
+      timezone = 'WAT'
+    }
+  }
 
   // Update lesson with meeting/recording links if provided
   let updatedLesson = null
@@ -87,7 +130,7 @@ export async function POST(request: Request) {
   }
 
   // Send email notifications to students if requested
-  if (notifyStudents && updatedLesson && (meetingLink || scheduledDate)) {
+  if (notifyStudents && (meetingLink || sessionDate)) {
     try {
       // Find all students in this cohort
       const students = await User.find({
@@ -95,6 +138,8 @@ export async function POST(request: Request) {
         status: 'active',
         cohort: cohortId,
       }).select('fullName preferredName email').lean()
+
+      const lessonTitle = customTitle || (updatedLesson?.title) || 'Class'
 
       // Send emails to all students
       const emailPromises = students.map((student) =>
@@ -104,11 +149,14 @@ export async function POST(request: Request) {
           type: 'class_scheduled',
           data: {
             name: student.preferredName || student.fullName,
-            classTitle: customTitle || updatedLesson.title,
+            classTitle: lessonTitle,
             date: date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            week: updatedLesson.week,
+            time: displayTime || 'TBD',
+            canadaTime: canadaTime || undefined,
+            timezone: displayTime ? timezone : undefined,
+            week: week,
             meetingLink: meetingLink || undefined,
+            recordingLink: recordingLink || undefined,
           },
         }).catch((err) => console.error(`Failed to send email to ${student.email}:`, err))
       )
@@ -160,6 +208,58 @@ export async function POST(request: Request) {
       // Unlock next class based on attendance completion
       await unlockNextClass(r.studentId, cohortId, week, sessionNum)
     }
+  }
+
+  return ok({ success: true })
+}
+
+export async function PUT(request: Request) {
+  const { session, response } = await requireAuth(['educator'])
+  if (response) return response
+
+  const body = await request.json().catch(() => null)
+  const parsed = putSchema.safeParse(body)
+  if (!parsed.success) return fail('Invalid parameters', 422)
+
+  const { attendanceId, status, note } = parsed.data
+  await connectToDatabase()
+
+  // Find the attendance record
+  const attendance = await Attendance.findById(attendanceId).lean()
+  if (!attendance) return fail('Attendance record not found', 404)
+
+  // Verify educator owns the cohort
+  const cohort = await Cohort.findOne({ _id: attendance.cohort, educator: session.userId }).lean()
+  if (!cohort) return fail('Unauthorized to edit this attendance record', 403)
+
+  // Get previous status for XP adjustment
+  const previousStatus = attendance.status
+  const wasPresent = previousStatus === 'present' || previousStatus === 'late'
+  const isNowPresent = status === 'present' || status === 'late'
+
+  // Update attendance record
+  await Attendance.findByIdAndUpdate(attendanceId, {
+    $set: {
+      status,
+      note: note || '',
+      markedBy: session.userId,
+    },
+  })
+
+  // Handle XP adjustments
+  if (isNowPresent && !wasPresent) {
+    // Changed to present - award XP
+    await awardXp(
+      attendance.student.toString(),
+      20,
+      'attendance',
+      undefined,
+      `Attendance updated to present for Week ${attendance.week} Session ${attendance.session}`
+    )
+  } else if (!isNowPresent && wasPresent) {
+    // Changed from present - remove XP (optional, depending on policy)
+    // For now, we'll just log this without removing XP
+    console.log(`Student ${attendance.student} changed from present to ${status} - consider XP adjustment`)
   }
 
   return ok({ success: true })

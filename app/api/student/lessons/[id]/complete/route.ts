@@ -1,7 +1,6 @@
 import { requireAuth, ok, fail } from '@/lib/api'
 import { connectToDatabase } from '@/lib/db'
 import { Lesson, LessonProgress } from '@/models/Curriculum'
-import { awardXp } from '@/lib/xp'
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { session, response } = await requireAuth(['student'])
@@ -20,7 +19,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     { completed: true, completedAt: new Date() },
     { upsert: true, new: true },
   )
-  await awardXp(session.userId, lesson.xpReward ?? 50, 'lesson', id)
-
-  return ok({ completed: true, xpEarned: lesson.xpReward ?? 50 })
+  
+  // XP is now awarded only by educators through attendance marking
+  // Students can mark lessons as complete for their own tracking, but no XP is awarded
+  
+  return ok({ completed: true, message: 'Lesson marked as complete. XP will be awarded by your educator when attendance is marked.' })
 }

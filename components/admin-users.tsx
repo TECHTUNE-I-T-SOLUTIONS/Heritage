@@ -183,7 +183,11 @@ export function AdminUsers({
 
   return (
     <>
-      <PageHeading eyebrow={eyebrow} title={title} description={description} />
+      <PageHeading 
+        eyebrow={eyebrow} 
+        title={title} 
+        description={description} 
+      />
       {loading && <Skeleton className="h-64" />}
       {error && <EmptyState title="Couldn't load" description={error} />}
       {data && <DataTable columns={columns} rows={data} empty={<EmptyState icon={<UsersIcon size={20} />} title="No records yet" description="They'll appear here as people join." />} />}
